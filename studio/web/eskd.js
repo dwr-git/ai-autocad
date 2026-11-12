@@ -61,9 +61,17 @@ A,12,-20
   const num = (v, d) => (Number.isFinite(Number(v)) ? Number(v) : d);
 
   // Всё действие — один шаг отмены.
+  let depth = 0;
   async function grouped(PC, fn) {
-    await PC.exec('undo', { mode: 'begin' }).catch(() => {});
-    try { return await fn(); } finally { await PC.exec('undo', { mode: 'end' }).catch(() => {}); }
+    // Вложенные вызовы (лист создаёт слои) — внутри одной группы.
+    if (depth++ === 0) await PC.exec('undo', { mode: 'begin' }).catch(() => {});
+    try { return await fn(); } finally { if (--depth === 0) await PC.exec('undo', { mode: 'end' }).catch(() => {}); }
+  }
+  // Высота надписи из ряда ГОСТ 2.304, при которой текст помещается в графу шириной width (мм листа).
+  function fitHeight(s, h, width) {
+    const n = [...String(s || '')].length;
+    for (const size of [14, 10, 7, 5, 3.5, 2.5, 1.8]) if (size <= h && n * size * 0.62 <= width) return size;
+    return 1.8;
   }
   async function inspect(PC) { return PC.call('drawing.inspect', { entities: false }); }
   async function allObjects(PC, filter, max = 5000) {
@@ -176,7 +184,10 @@ A,12,-20
     const t = String(v || '').trim().replace('.', ',');
     return SCALES.find((s) => s[0] === t) || ENLARGE.find((s) => s[0] === t) || null;
   }
-  async function drawLine(PC, a, b) { return PC.exec('line', { points: [a, b] }); }
+  async function drawLine(PC, a, b) {
+    const r = await PC.exec('line', { points: [a, b] });
+    return (r && (r.handles || (r.handle ? [r.handle] : []))) || [];
+  }
   async function text(PC, s, at, height, justify) {
     if (!String(s || '').trim()) return null;
     return PC.exec('text', { at, text: String(s), height: r2(height), justify });
@@ -221,33 +232,37 @@ A,12,-20
     return grouped(PC, async () => {
       await setup(PC, { current: false });
       const before = d.currentLayer || '0';
+      // Всё — на слое Рамка (основная линия 0,5 мм); тонкие линии — с толщиной 0,25 мм у самих объектов.
       // Внешняя рамка (линия обреза листа) — тонкая, внутренняя — основная.
-      await PC.exec('layer.current', { name: 'Тонкая' });
-      await PC.exec('pline', { vertices: [P(0, 0), P(W, 0), P(W, H), P(0, H)], closed: true });
       await PC.exec('layer.current', { name: 'Рамка' });
+      const thinHandles = [];
+      const outer = await PC.exec('pline', { vertices: [P(0, 0), P(W, 0), P(W, H), P(0, H)], closed: true });
+      if (outer && outer.handle) thinHandles.push(outer.handle);
       await PC.exec('pline', { vertices: [P(20, 5), P(W - 5, 5), P(W - 5, H - 5), P(20, H - 5)], closed: true });
       // Основная надпись — в правом нижнем углу рамки.
       const sx = W - 5 - 185, sy = 5;
       const S = (x, y) => P(sx + x, sy + y);
       const lines = stampLines();
-      for (const [x1, y1, x2, y2, thick] of lines.filter((l) => l[4])) await drawLine(PC, S(x1, y1), S(x2, y2));
-      await PC.exec('layer.current', { name: 'Тонкая' });
-      for (const [x1, y1, x2, y2] of lines.filter((l) => !l[4])) await drawLine(PC, S(x1, y1), S(x2, y2));
+      for (const [x1, y1, x2, y2] of lines.filter((l) => l[4])) await drawLine(PC, S(x1, y1), S(x2, y2));
+      for (const [x1, y1, x2, y2] of lines.filter((l) => !l[4])) thinHandles.push(...(await drawLine(PC, S(x1, y1), S(x2, y2))));
+      if (thinHandles.length) await PC.exec('properties.set', { handles: thinHandles, lineweight: 0.25 }).catch(() => {});
       await PC.exec('layer.current', { name: 'Текст' });
       await PC.exec('style', { name: TEXT_STYLE, current: true }).catch(() => {});
       for (const [s, x, y, h, j] of stampLabels()) await text(PC, s, S(x, y), h * k, j);
       // Значения граф.
       const f = args;
       const sheets = num(f.sheets, 1);
-      await text(PC, f.designation || 'Обозначение', S(125, 47.5), 7 * k, 'MC');
+      const designation = String(f.designation || 'Обозначение');
+      await text(PC, designation, S(125, 47.5), fitHeight(designation, 7, 116) * k, 'MC');
       const name = String(f.name || 'Наименование');
-      if (name.length > 24) {
-        await PC.exec('mtext', { at: S(100, 27.5), text: name, height: r2(5 * k), width: r2(66 * k), justify: 'MC' });
+      if (fitHeight(name, 5, 66) < 3.5) {
+        await PC.exec('mtext', { at: S(100, 27.5), text: name, height: r2(3.5 * k), width: r2(66 * k), justify: 'MC' });
       } else {
-        await text(PC, name, S(100, 27.5), 5 * k, 'MC');
+        await text(PC, name, S(100, 27.5), fitHeight(name, 5, 66) * k, 'MC');
       }
-      await text(PC, f.material || 'Материал', S(100, 7.5), 5 * k, 'MC');
-      await text(PC, f.organization, S(160, 7.5), 3.5 * k, 'MC');
+      const material = String(f.material || 'Материал');
+      await text(PC, material, S(100, 7.5), fitHeight(material, 5, 66) * k, 'MC');
+      if (f.organization) await text(PC, f.organization, S(160, 7.5), fitHeight(f.organization, 3.5, 47) * k, 'MC');
       await text(PC, scale[0], S(176, 27.5), 5 * k, 'MC');
       await text(PC, f.mass, S(158.5, 27.5), 3.5 * k, 'MC');
       await text(PC, f.litera, S(137.5, 27.5), 3.5 * k, 'MC');
@@ -371,6 +386,8 @@ A,12,-20
     for (const e of all) {
       const g = e.geometry || {};
       counts[e.type] = (counts[e.type] || 0) + 1;
+      // Рамка и основная надпись — из отдельных линий, их концы свободны по замыслу.
+      if (e.layer === 'Рамка') continue;
       if (e.layer === '0' && g.type !== 'viewport') onZero.push(e.handle);
       if (g.type === 'line') {
         const a = XY(g.a), b = XY(g.b);

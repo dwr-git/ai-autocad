@@ -80,6 +80,8 @@ jobs:
           if-no-files-found: error
 
       - name: Выложить в Releases (отдельная сборка с номером)
+        # Только сборки ветки main; пробные ветки (запуск вручную) дают zip в Artifacts.
+        if: github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

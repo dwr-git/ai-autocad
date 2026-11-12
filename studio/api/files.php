@@ -175,9 +175,9 @@ function files_name(?string $name): string
     if (mb_strlen($name) > 120) {
         $name = mb_substr($name, 0, 120);
     }
-    // Чертёж без известного расширения сохраняется как DWG.
+    // Чертёж без известного расширения сохраняется как DXF (родной формат редактора).
     if (files_ext($name) === '') {
-        $name .= '.dwg';
+        $name .= '.dxf';
     }
     return $name;
 }

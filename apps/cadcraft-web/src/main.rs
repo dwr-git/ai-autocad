@@ -11,7 +11,7 @@
 //!
 //! AI-AutoCAD: `window.aiautocad` (`bridge.rs`) lets the assistant panel next to the editor drive
 //! it; saved drawings go to the page («Мои чертежи» on the server); the first start is in Russian,
-//! with metric drawings, DWG saves and the Brand theme; the house goes back to the site.
+//! with metric drawings and the Brand theme; the house goes back to the site.
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 
 #[cfg(target_arch = "wasm32")]
@@ -193,13 +193,11 @@ mod web {
                         }
                         match cc.storage.and_then(|s| s.get_string(cadcraft_ui_egui::PREFS_KEY)) {
                             Some(prefs) => app.load_prefs(&prefs),
-                            // AI-AutoCAD's first start: Russian interface, the Brand theme, DWG
-                            // saves (the other themes stay in View › Interface Theme and the
-                            // panel's theme menu).
+                            // AI-AutoCAD's first start: Russian interface and the Brand theme (the
+                            // other themes stay in View › Interface Theme and the panel's theme menu).
                             None => {
                                 let _ = app.run("ui.language", serde_json::json!({"lang": "ru"}));
                                 app.ui.theme = cadcraft_ui_egui::theme::ThemePref::Brand;
-                                app.ui.save_format = cadcraft_ui_egui::SaveFormat::Dwg;
                             }
                         }
                         if let Some(layout) = cc.storage.and_then(|s| s.get_string(crate::panel_layout::KEY))

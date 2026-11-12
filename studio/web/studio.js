@@ -1080,8 +1080,8 @@
     return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: d.getFullYear() === now.getFullYear() ? undefined : 'numeric' }) + ', ' + time;
   };
   const DOC_EXT = /\.(dwg|dxf|dwt)$/i;
-  // Формат по умолчанию: DWG (как у AutoCAD); DXF и DWT сохраняются как есть.
-  const DEFAULT_EXT = '.dwg';
+  // Формат по умолчанию: DXF (родной формат редактора); имя с .dwg/.dwt сохраняется как есть.
+  const DEFAULT_EXT = '.dxf';
 
   // Окно с одним полем: имя файла.
   function askName(title, value, note) {
@@ -1236,7 +1236,8 @@
         saving = true;
         if (!name) {
           if (quiet) return;
-          name = await askName(asked ? 'Сохранить как' : 'Сохранить на сервере', withExt(given || 'Чертёж'), 'Чертёж появится в «Моих чертежах». Формат — по расширению: .dwg, .dxf или .dwt.');
+          const suggest = withExt((given || 'Чертёж').replace(/^Drawing(\d*)/, (m, n) => 'Чертёж' + (n && n !== '1' ? ' ' + n : '')));
+          name = await askName(asked ? 'Сохранить как' : 'Сохранить на сервере', suggest, 'Чертёж появится в «Моих чертежах». Формат — по расширению: .dwg, .dxf или .dwt.');
           if (!name) { dirty = true; download(given || 'Чертёж.dwg', bytes); toast('На сервер не сохранено — файл скачан в браузере.'); return; }
           name = withExt(name.trim());
           if (!list.length) await refresh().catch(() => {});
@@ -1269,10 +1270,16 @@
         else toast('Автосохранение не удалось: ' + e.message + '. Копия осталась в браузере.', true);
       } finally { saving = false; }
     }
+    // «Сохранить»: у чертежа уже есть имя — QSAVE туда же; нет — как «Сохранить как» (редактор
+    // предложит имя, панель спросит своё).
     async function save(saveAs) {
       if (!PC.ready()) return;
       saveAsNext = !!saveAs;
-      try { await PC.call('ui.menu.invoke', { command: saveAs ? 'saveas' : 'qsave' }); } catch (e) { saveAsNext = false; toast('Не удалось сохранить: ' + e.message, true); }
+      try {
+        let path = null;
+        try { path = (await PC.call('drawing.inspect', { entities: false })).path; } catch { throw new Error('сначала откройте или создайте чертёж'); }
+        if (saveAs || !path) await PC.exec('ui.saveas'); else await PC.exec('qsave');
+      } catch (e) { saveAsNext = false; toast('Не удалось сохранить: ' + e.message, true); }
     }
     async function rename(name) {
       const to0 = await askName('Переименовать', name);
