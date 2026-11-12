@@ -264,13 +264,13 @@ A,12,-20
       await text(PC, material, S(100, 7.5), fitHeight(material, 5, 66) * k, 'MC');
       if (f.organization) await text(PC, f.organization, S(160, 7.5), fitHeight(f.organization, 3.5, 47) * k, 'MC');
       await text(PC, scale[0], S(176, 27.5), 5 * k, 'MC');
-      await text(PC, f.mass, S(158.5, 27.5), 3.5 * k, 'MC');
-      await text(PC, f.litera, S(137.5, 27.5), 3.5 * k, 'MC');
+      if (f.mass) await text(PC, f.mass, S(158.5, 27.5), fitHeight(f.mass, 3.5, 15) * k, 'MC');
+      if (f.litera) await text(PC, f.litera, S(137.5, 27.5), fitHeight(f.litera, 3.5, 4.5) * k, 'MC');
       await text(PC, sheets > 1 ? String(num(f.sheet, 1)) : '', S(148, 17.5), 2.5 * k, 'ML');
       await text(PC, String(sheets), S(172, 17.5), 2.5 * k, 'ML');
       const people = [[f.developer, 27.5], [f.checker, 22.5], [f.tcontrol, 17.5], [f.ncontrol, 7.5], [f.approver, 2.5]];
-      for (const [who, y] of people) await text(PC, who, S(18, y), 2.5 * k, 'ML');
-      if (f.date) for (const [who, y] of people) if (who) await text(PC, f.date, S(60, y), 2.5 * k, 'MC');
+      for (const [who, y] of people) if (who) await text(PC, who, S(18, y), fitHeight(who, 2.5, 21) * k, 'ML');
+      if (f.date) for (const [who, y] of people) if (who) await text(PC, f.date, S(60, y), fitHeight(f.date, 2.5, 9.5) * k, 'MC');
       await PC.exec('layer.current', { name: before }).catch(() => {});
       await PC.exec('zoom', { mode: 'window', p1: P(-5, -5), p2: P(W + 5, H + 5) }).catch(() => PC.exec('zoom.extents').catch(() => {}));
       const fits = !ext || (objW <= fieldW * k && objH <= fieldH * k);
