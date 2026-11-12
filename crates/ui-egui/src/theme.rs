@@ -1,7 +1,8 @@
 //! Design tokens. Colours were measured from the reference look (dark slate chrome, near-black
 //! navy model space) and are CADCraft's own values; every widget reads them from here.
 //!
-//! Two palettes: [`Tokens::DARK`] (the original look) and [`Tokens::LIGHT`]. The interface theme
+//! AI-AutoCAD: three palettes, [`Tokens::BRAND`] (the default), [`Tokens::DARK`] (our NeuDark) and
+//! [`Tokens::LIGHT`] (our NeuLight). The interface theme
 //! changes the chrome (title and tool bar, menus, palettes, tabs, command line, status bar,
 //! dialogs); the drawing area keeps its model-space colours in both, as drawing colours are not
 //! part of the interface theme. [`Tokens::get`] returns the palette of the theme in use, which
@@ -147,26 +148,28 @@ pub struct Tokens {
 }
 
 impl Tokens {
+    /// AI-AutoCAD's Dark: our NeuDark palette (chrome #262D3A, cards #282F3D, canvas #1B202A, fields
+    /// #202632, text #E4EBF6 / #C4CFE0 / #A0ADC2, accent #5CA8FF with dark text on it).
     pub const DARK: Tokens = Tokens {
-        chrome: Color32::from_rgb(0x3b, 0x44, 0x53),
-        chrome_dark: Color32::from_rgb(0x31, 0x38, 0x44),
-        panel: Color32::from_rgb(0x3c, 0x44, 0x52),
-        tab_active: Color32::from_rgb(0x4e, 0x5a, 0x6e),
-        control: Color32::from_rgb(0x50, 0x5a, 0x6d),
-        control_hover: Color32::from_rgb(0x5c, 0x67, 0x7c),
-        border: Color32::from_rgb(0x23, 0x29, 0x30),
-        canvas: Color32::from_rgb(0x22, 0x28, 0x2f),
-        grid_minor: Color32::from_rgb(0x29, 0x30, 0x3a),
-        grid_major: Color32::from_rgb(0x31, 0x39, 0x45),
+        chrome: Color32::from_rgb(0x26, 0x2d, 0x3a),
+        chrome_dark: Color32::from_rgb(0x22, 0x28, 0x34),
+        panel: Color32::from_rgb(0x28, 0x2f, 0x3d),
+        tab_active: Color32::from_rgb(0x32, 0x3a, 0x4a),
+        control: Color32::from_rgb(0x2d, 0x35, 0x44),
+        control_hover: Color32::from_rgb(0x3a, 0x44, 0x56),
+        border: Color32::from_rgb(0x1c, 0x22, 0x2c),
+        canvas: Color32::from_rgb(0x1b, 0x20, 0x2a),
+        grid_minor: Color32::from_rgb(0x26, 0x2b, 0x35),
+        grid_major: Color32::from_rgb(0x34, 0x39, 0x41),
         axis_x: Color32::from_rgb(0x56, 0x28, 0x29),
         axis_y: Color32::from_rgb(0x28, 0x4a, 0x2e),
-        text: Color32::from_rgb(0xd7, 0xdb, 0xe0),
-        text_dim: Color32::from_rgb(0xa3, 0xaa, 0xb4),
-        text_faint: Color32::from_rgb(0x87, 0x8d, 0x96),
-        icon: Color32::from_rgb(0xcf, 0xd4, 0xdb),
-        icon_accent: Color32::from_rgb(0x4f, 0xa3, 0xf7),
+        text: Color32::from_rgb(0xe4, 0xeb, 0xf6),
+        text_dim: Color32::from_rgb(0xc4, 0xcf, 0xe0),
+        text_faint: Color32::from_rgb(0xa0, 0xad, 0xc2),
+        icon: Color32::from_rgb(0xc4, 0xcf, 0xe0),
+        icon_accent: Color32::from_rgb(0x5c, 0xa8, 0xff),
         icon_point: Color32::from_rgb(0xf0, 0x7a, 0x3a),
-        accent: Color32::from_rgb(0x3d, 0x8b, 0xfd),
+        accent: Color32::from_rgb(0x5c, 0xa8, 0xff),
         selection: Color32::from_rgb(0x4a, 0x8f, 0xff),
         hover: Color32::from_rgb(0x9c, 0xc6, 0xff),
         grip: Color32::from_rgb(0x2f, 0x6b, 0xff),
@@ -178,49 +181,50 @@ impl Tokens {
         compare_area: Color32::from_rgb(0xff, 0xb4, 0x3c),
         window_stroke: Color32::from_rgb(0x6f, 0xa8, 0xff),
         crossing_stroke: Color32::from_rgb(0x7f, 0xe0, 0x7f),
-        cmd_bg: Color32::from_rgba_premultiplied(0x34, 0x3c, 0x4a, 0xf0),
-        toggle_on: Color32::from_rgb(0x3d, 0x8b, 0xfd),
-        field: Color32::from_rgb(0x31, 0x38, 0x44),
-        select_bg: Color32::from_rgb(0x3d, 0x8b, 0xfd),
-        canvas_ink: Color32::from_rgb(0xa3, 0xaa, 0xb4),
-        cmd_history: Color32::from_rgba_unmultiplied_const(0x2a, 0x30, 0x3a, 170),
-        cmd_border: Color32::from_rgb(0x55, 0x5f, 0x70),
-        cmd_keyword: Color32::from_rgb(0x8f, 0xc1, 0xff),
-        cmd_keyword_hover: Color32::from_rgb(0x2f, 0x5e, 0xa8),
-        list_bg: Color32::from_rgb(0x2b, 0x31, 0x3b),
-        list_row: Color32::from_rgb(0x3a, 0x42, 0x50),
+        cmd_bg: Color32::from_rgba_premultiplied(0x21, 0x27, 0x33, 0xf0),
+        toggle_on: Color32::from_rgb(0x5c, 0xa8, 0xff),
+        field: Color32::from_rgb(0x20, 0x26, 0x32),
+        select_bg: Color32::from_rgb(0x2c, 0x4a, 0x6e),
+        canvas_ink: Color32::from_rgb(0xa0, 0xad, 0xc2),
+        cmd_history: Color32::from_rgba_unmultiplied_const(0x1e, 0x24, 0x30, 170),
+        cmd_border: Color32::from_rgb(0x3b, 0x45, 0x58),
+        cmd_keyword: Color32::from_rgb(0x8e, 0xc6, 0xff),
+        cmd_keyword_hover: Color32::from_rgb(0x2c, 0x4a, 0x6e),
+        list_bg: Color32::from_rgb(0x20, 0x26, 0x32),
+        list_row: Color32::from_rgb(0x32, 0x3a, 0x4a),
         warn: Color32::from_rgb(0xff, 0xd0, 0x80),
         crosshair: Color32::from_rgb(0xe8, 0xe8, 0xe8),
         paper: Color32::WHITE,
     };
 
-    /// Light grey chrome with dark text. The drawing-area colours (canvas, grid, axes, selection,
-    /// grips, snap markers, selection windows) are the same as [`Tokens::DARK`]'s.
+    /// AI-AutoCAD's Light: our NeuLight palette (chrome #E4ECF6, cards #E6EEF8, fields #DCE6F3, text
+    /// #1E2C42 / #34445E / #4E5E78, accent #3480E2, accent text #1652A8). The drawing area keeps the
+    /// dark model space, as drawing colours are not part of the interface theme.
     pub const LIGHT: Tokens = Tokens {
-        chrome: Color32::from_rgb(0xe4, 0xe7, 0xeb),
-        chrome_dark: Color32::from_rgb(0xd5, 0xd9, 0xdf),
-        panel: Color32::from_rgb(0xee, 0xf0, 0xf3),
-        tab_active: Color32::from_rgb(0xc8, 0xd3, 0xe2),
-        control: Color32::from_rgb(0xdc, 0xe0, 0xe6),
-        control_hover: Color32::from_rgb(0xcb, 0xd2, 0xdc),
-        border: Color32::from_rgb(0xb3, 0xba, 0xc4),
-        text: Color32::from_rgb(0x1d, 0x23, 0x2b),
-        text_dim: Color32::from_rgb(0x47, 0x50, 0x5c),
-        text_faint: Color32::from_rgb(0x62, 0x6a, 0x76),
-        icon: Color32::from_rgb(0x34, 0x3c, 0x48),
-        icon_accent: Color32::from_rgb(0x1b, 0x6f, 0xd6),
+        chrome: Color32::from_rgb(0xe4, 0xec, 0xf6),
+        chrome_dark: Color32::from_rgb(0xdc, 0xe5, 0xf1),
+        panel: Color32::from_rgb(0xe6, 0xee, 0xf8),
+        tab_active: Color32::from_rgb(0xc8, 0xd6, 0xea),
+        control: Color32::from_rgb(0xdc, 0xe6, 0xf3),
+        control_hover: Color32::from_rgb(0xcf, 0xdc, 0xee),
+        border: Color32::from_rgb(0xc9, 0xd5, 0xe5),
+        text: Color32::from_rgb(0x1e, 0x2c, 0x42),
+        text_dim: Color32::from_rgb(0x34, 0x44, 0x5e),
+        text_faint: Color32::from_rgb(0x4e, 0x5e, 0x78),
+        icon: Color32::from_rgb(0x34, 0x44, 0x5e),
+        icon_accent: Color32::from_rgb(0x34, 0x80, 0xe2),
         icon_point: Color32::from_rgb(0xd3, 0x5a, 0x1c),
-        accent: Color32::from_rgb(0x2f, 0x7c, 0xf6),
-        cmd_bg: Color32::from_rgba_unmultiplied_const(0xf9, 0xfa, 0xfb, 0xf0),
-        toggle_on: Color32::from_rgb(0x2f, 0x7c, 0xf6),
-        field: Color32::from_rgb(0xff, 0xff, 0xff),
-        select_bg: Color32::from_rgb(0xb6, 0xd3, 0xfb),
-        cmd_history: Color32::from_rgba_unmultiplied_const(0xf0, 0xf2, 0xf5, 0xdc),
-        cmd_border: Color32::from_rgb(0xa9, 0xb0, 0xba),
-        cmd_keyword: Color32::from_rgb(0x15, 0x59, 0xc0),
-        cmd_keyword_hover: Color32::from_rgb(0xcf, 0xe0, 0xfa),
-        list_bg: Color32::from_rgb(0xfb, 0xfc, 0xfd),
-        list_row: Color32::from_rgb(0xe3, 0xe8, 0xef),
+        accent: Color32::from_rgb(0x34, 0x80, 0xe2),
+        cmd_bg: Color32::from_rgba_unmultiplied_const(0xf2, 0xf6, 0xfb, 0xf0),
+        toggle_on: Color32::from_rgb(0x34, 0x80, 0xe2),
+        field: Color32::from_rgb(0xdc, 0xe6, 0xf3),
+        select_bg: Color32::from_rgb(0xc2, 0xd8, 0xf5),
+        cmd_history: Color32::from_rgba_unmultiplied_const(0xe6, 0xee, 0xf8, 0xdc),
+        cmd_border: Color32::from_rgb(0xb3, 0xc2, 0xd6),
+        cmd_keyword: Color32::from_rgb(0x16, 0x52, 0xa8),
+        cmd_keyword_hover: Color32::from_rgb(0xc8, 0xd6, 0xea),
+        list_bg: Color32::from_rgb(0xee, 0xf3, 0xfa),
+        list_row: Color32::from_rgb(0xd5, 0xe0, 0xee),
         warn: Color32::from_rgb(0x8a, 0x53, 0x00),
         ..Tokens::DARK
     };
@@ -889,6 +893,21 @@ fn visuals(theme: Theme) -> Visuals {
     v.popup_shadow = egui::epaint::Shadow { offset: [0, 4], blur: 12, spread: 0, color: shadow };
     v.window_corner_radius = egui::CornerRadius::same(6);
     v.menu_corner_radius = egui::CornerRadius::same(5);
+    if !brand() {
+        // AI-AutoCAD's Light and Dark: neumorphic rounded windows and menus, soft shadows tinted
+        // with the palette's blue, dark text on the Dark theme's light-blue accent.
+        let shade = if theme == Theme::Dark { Color32::from_black_alpha(150) } else { Color32::from_rgba_unmultiplied(0x46, 0x5a, 0x82, 70) };
+        v.window_corner_radius = egui::CornerRadius::same(10);
+        v.menu_corner_radius = egui::CornerRadius::same(8);
+        v.popup_shadow = egui::epaint::Shadow { offset: [0, 6], blur: 18, spread: 0, color: shade };
+        v.window_shadow = egui::epaint::Shadow { offset: [0, 10], blur: 30, spread: 0, color: shade };
+        v.window_stroke = egui::Stroke::new(1.0, t.border);
+        v.selection.stroke = egui::Stroke::new(1.0, t.accent);
+        v.hyperlink_color = if theme == Theme::Dark { Color32::from_rgb(0x8e, 0xc6, 0xff) } else { Color32::from_rgb(0x16, 0x52, 0xa8) };
+        if theme == Theme::Dark {
+            v.widgets.active.fg_stroke.color = Color32::from_rgb(0x0b, 0x12, 0x20);
+        }
+    }
     if theme == Theme::Dark && brand() {
         // Brand: menus, popups and windows are solid black blocks with a strong black shadow.
         v.window_fill = Color32::BLACK;
