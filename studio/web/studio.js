@@ -1,4 +1,4 @@
-/* AI-AutoCAD — помощник и файлы на сервере внутри программы черчения.
+/* AI Чертежи — помощник и файлы на сервере внутри программы черчения.
  *
  * Панель в браузере разговаривает с моделью через api/assistant.php, а действия
  * выполняет в самом редакторе через window.aiautocad (apps/cadcraft-web/src/bridge.rs):
@@ -42,6 +42,31 @@
   // Команды, которые ничего не меняют в чертеже: после них «Отменить» не нужна.
   const NO_UNDO = /^(select|selectall|ai_deselect|qselect|entities|drawing\.inspect|properties$|list$|dist$|area$|id$|zoom|pan$|regen|regenall|layer$|dimstyle\.list|layerstate\.list|-?view|time|status|shapes)/;
   const fix = (v, n = 2) => (typeof v === 'number' && Number.isFinite(v) ? Math.round(v * 10 ** n) / 10 ** n : v);
+
+  // ------------------------------------------------------------------ проверка DWG перед открытием
+  // Редактор (apps/cadcraft-web/src/upload.rs) перед открытием DWG спрашивает эту функцию. Файл
+  // читается в отдельной копии редактора в Web Worker (studio/dwgcheck.js): если читатель DWG там
+  // остановился, редактор не открывает файл и пишет, что он повреждён. Если проверка не запустилась
+  // (нет модуля или Worker) или идёт дольше 2 минут — файл открывается как обычно.
+  window.aiautocadCheckDwg = (name, bytes) => new Promise((resolve) => {
+    const app = window.__aiautocadApp;
+    if (!app || !app.module || !app.loader || typeof Worker !== 'function') { resolve(''); return; }
+    let worker;
+    try { worker = new Worker(new URL('studio/dwgcheck.js', document.baseURI), { type: 'module' }); } catch { resolve(''); return; }
+    let ready = false;
+    let settled = false;
+    const done = (why) => { if (settled) return; settled = true; clearTimeout(timer); worker.terminate(); resolve(why); };
+    const timer = setTimeout(() => done(''), 120000);
+    const broken = 'файл повреждён или не поддерживается: чтение DWG остановилось. Откройте его в AutoCAD и сохраните заново (или как DXF).';
+    worker.onmessage = (e) => {
+      const m = e.data || {};
+      if (m.stage === 'ready') ready = true;
+      else if (m.stage === 'init') { console.warn('AI Чертежи: проверка DWG не запустилась', m.error); done(''); }
+      else if (m.stage === 'done') { if (!m.ok) console.warn('AI Чертежи: DWG не читается', m.error); done(m.ok ? '' : broken); }
+    };
+    worker.onerror = (e) => { e.preventDefault(); done(ready ? broken : ''); };
+    try { worker.postMessage({ loader: app.loader, module: app.module, name, bytes }, [bytes.buffer]); } catch { done(''); }
+  });
 
   // ------------------------------------------------------------------ мост к редактору
   const VC = () => window.aiautocad;
@@ -570,7 +595,7 @@
   function showEmpty() {
     log.innerHTML = `<div class="st-empty">
       <h3>Чем помочь?</h3>
-      <p>Спросите, где найти команду в AI-AutoCAD, или попросите начертить, оформить по ЕСКД или проверить чертёж за вас.</p>
+      <p>Спросите, где найти команду в AI Чертежи, или попросите начертить, оформить по ЕСКД или проверить чертёж за вас.</p>
       <button class="st-mini primary st-start-tpl">Быстрые задачи</button>
       <div class="st-chips">
         <button class="st-chip" data-act="1">Начерти рамку A4 со штампом</button>
@@ -832,7 +857,7 @@
     try {
       r = await post(payload);
     } catch (e) {
-      console.warn('AI-AutoCAD: запрос к помощнику оборвался', e);
+      console.warn('AI Чертежи: запрос к помощнику оборвался', e);
       if (!hasImages(payload)) throw new Error(await explainNoAnswer(took()));
       try { r = await post(withoutImages(payload)); } catch { throw new Error(await explainNoAnswer(took())); }
       tellImagesBlocked();
@@ -1383,13 +1408,13 @@
       try {
         const j = await (await fetch(CFG.files + '?action=fonts', { credentials: 'same-origin', cache: 'no-store' })).json();
         for (const f of (j && j.ok && j.fonts) || []) {
-          await add(f.name, CFG.files + '?action=font&name=' + encodeURIComponent(f.name)).catch((e) => console.warn('AI-AutoCAD: шрифт ' + f.name, e));
+          await add(f.name, CFG.files + '?action=font&name=' + encodeURIComponent(f.name)).catch((e) => console.warn('AI Чертежи: шрифт ' + f.name, e));
         }
       } catch { /* нет входа или сервера — только двойники */ }
       try {
         const m = await (await fetch(CFG.fonts, { cache: 'no-cache' })).json();
         for (const f of (m && m.fonts) || []) {
-          await add(f.file, 'fonts/' + encodeURIComponent(f.file)).catch((e) => console.warn('AI-AutoCAD: шрифт ' + f.file, e));
+          await add(f.file, 'fonts/' + encodeURIComponent(f.file)).catch((e) => console.warn('AI Чертежи: шрифт ' + f.file, e));
         }
       } catch { /* сборка без шрифтов */ }
       // Открытые чертежи перерисовываются с новыми шрифтами.
@@ -1939,7 +1964,7 @@
     commands().catch(() => {});
     watchTheme();
     Gallery.start();
-    fonts.then((n) => { if (n) console.info('AI-AutoCAD: шрифтов загружено', n); });
+    fonts.then((n) => { if (n) console.info('AI Чертежи: шрифтов загружено', n); });
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);

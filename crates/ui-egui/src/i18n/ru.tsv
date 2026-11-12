@@ -28,7 +28,7 @@
 	= Equals	= Равно
 	> Greater than	> Больше чем
 	About	О программе
-	About CADCraft	О AI-AutoCAD
+	About CADCraft	О программе AI Чертежи
 	Absolute	Абсолютные
 	Add Leader	Добавить выноску
 	Align	Выровнять
@@ -84,7 +84,7 @@
 	ByBlock	Поблоку
 	ByColor	ПоЦвету
 	ByLayer	Послою
-	CADCraft Help	Справка AI-AutoCAD
+	CADCraft Help	Справка AI Чертежи
 	Cancel	Отмена
 	Cartesian (x, y)	Декартовы (x, y)
 	Center	Центр
@@ -591,7 +591,7 @@
 	Quick Select Properties	Свойства быстрого выбора
 	Quick Select...	Быстрый выбор...
 	QuickCalc	Быстрокалькулятор
-	Quit CADCraft	Выйти из AI-AutoCAD
+	Quit CADCraft	Выйти из AI Чертежи
 	Radius	Радиус
 	Raster Image	Растровое изображение
 	Ray	Луч
@@ -998,7 +998,7 @@
 @plural	{n} contributor	{n} участник|{n} участника|{n} участников
 	Drawing as bytes	Чертеж как байты
 	Services	Службы
-	Hide CADCraft	Скрыть AI-AutoCAD
+	Hide CADCraft	Скрыть AI Чертежи
 	Hide Others	Скрыть остальные
 	Accessibility	Специальные возможности
 	Show System Cursor	Показывать системный курсор
@@ -1014,7 +1014,7 @@
 	Query Texts	Запрос текстов
 	Analyze Shapes	Анализ фигур
 	Check for Updates…	Проверить обновления…
-	CADCraft is up to date.	У вас последняя версия AI-AutoCAD.
+	CADCraft is up to date.	У вас последняя версия AI Чертежи.
 	Could not check for updates.	Не удалось проверить обновления.
 	Find All	Find All
 	Find what:	Find what:
@@ -1034,7 +1034,7 @@
 	3D Mouse Navigation	Навигация 3D-мышью
 	3D Mouse...	3D-мышь...
 	A drawing opened from a file keeps that file's format.	Чертёж, открытый из файла, сохраняется в формате этого файла.
-	A shortcut you give wins over CADCraft's own. Changes apply at once and are kept for next time.	Ваше сочетание клавиш важнее встроенного в AI-AutoCAD. Изменения действуют сразу и сохраняются.
+	A shortcut you give wins over CADCraft's own. Changes apply at once and are kept for next time.	Ваше сочетание клавиш важнее встроенного в AI Чертежи. Изменения действуют сразу и сохраняются.
 	A variable name starts with a letter and has only letters, digits and _	Имя переменной начинается с буквы и состоит из букв, цифр и _
 	Add Current Scale	Добавить текущий масштаб
 	Add/Delete Scales...	Добавить/удалить масштабы...
@@ -1044,7 +1044,7 @@
 	Add…	Добавить…
 	Alias	Псевдоним
 	Alias file: {file}	Файл псевдонимов: {file}
-	Aliases are saved in your CADCraft profile and survive restarts.	Псевдонимы хранятся в вашем профиле AI-AutoCAD и сохраняются между запусками.
+	Aliases are saved in your CADCraft profile and survive restarts.	Псевдонимы хранятся в вашем профиле AI Чертежи и сохраняются между запусками.
 	Align Multileaders	Выровнять мультивыноски
 	All Annotation Objects	Все объекты аннотаций
 	All Scales	Все масштабы
@@ -1057,7 +1057,7 @@
 	Attach DWG...	Вставить DWG-ссылку...
 	Automatic save every	Автосохранение каждые
 	Automatic save file location	Папка файлов автосохранения
-	Back to CADCraft's shortcut	Вернуть встроенное сочетание AI-AutoCAD
+	Back to CADCraft's shortcut	Вернуть встроенное сочетание AI Чертежи
 	Backup copy	Резервная копия
 	Bind	Внедрить
 	Bind...	Внедрить...
@@ -1070,7 +1070,7 @@
 	Bring Above Objects	Поместить над объектами
 	Bring Annotations to Front	Аннотации на передний план
 	Bulleted list	Маркированный список
-	CADCraft keeps these preferences, object snap modes and drafting toggles for your user account and restores them when it starts.	AI-AutoCAD хранит эти настройки, режимы привязок и переключатели черчения для вашей учётной записи и восстанавливает их при запуске.
+	CADCraft keeps these preferences, object snap modes and drafting toggles for your user account and restores them when it starts.	AI Чертежи хранит эти настройки, режимы привязок и переключатели черчения для вашей учётной записи и восстанавливает их при запуске.
 	Calibrate 3D Mouse	Калибровка 3D-мыши
 	Centered	По центру
 	Change	Изменить
@@ -1375,3 +1375,76 @@
 	{alias} is already defined; select it and use Edit.	{alias} уже есть; выберите его и нажмите «Изменить».
 	{command} is an unknown command.	{command} — неизвестная команда.
 	{n} more warnings; see the command line.	Ещё предупреждений: {n}; см. командную строку.
+	Drawing{n}	Чертёж{n}
+	Regenerating all viewports.	Регенерация всех видовых экранов.
+	Regenerating model.	Регенерация модели.
+	Group begun	Группа начата
+	Group ended	Группа завершена
+	Group ended; new group begun	Группа завершена, начата новая
+	No group to end	Нет начатой группы
+	Everything has been undone	Всё отменено
+	Nothing to undo.	Нечего отменять.
+	Invalid option keyword.	Неверный ключ параметра.
+	*Invalid selection*	*Неверный выбор*
+	*Cancel*	*Отмена*
+	Requires a valid angle.	Требуется правильный угол.
+	Requires a number.	Требуется число.
+	Requires a positive number.	Требуется положительное число.
+	Requires a nonzero number.	Требуется ненулевое число.
+	Invalid point.	Неверная точка.
+	0 found	Найдено: 0
+	No viewport found there.	Там нет видового экрана.
+	No object found.	Объект не найден.
+	No previous view saved.	Предыдущий вид не сохранён.
+	No objects are isolated or hidden.	Нет изолированных или скрытых объектов.
+	No differences.	Различий нет.
+	Restored previous layer states.	Восстановлены предыдущие состояния слоёв.
+	Key points are not available yet; specify a point.	Ключевые точки пока недоступны; укажите точку.
+	Revision cloud finished.	Облако исправлений построено.
+	No dimensions selected.	Размеры не выбраны.
+	Object selected is not a dimension.	Выбранный объект — не размер.
+	Object selected is not a circle or arc.	Выбранный объект — не окружность и не дуга.
+	No line or arc to continue.	Нет отрезка или дуги для продолжения.
+	No hatch selected.	Штриховка не выбрана.
+	No table there.	Там нет таблицы.
+	The object is not a table.	Объект — не таблица.
+	Select a multileader.	Выберите мультивыноску.
+	Viewport created, zoomed to the model extents.	Видовой экран создан, показаны границы модели.
+	** Command not allowed in Model Tab ** (switch to a layout first)	** Команда недоступна на вкладке «Модель» ** (сначала перейдите на лист)
+	Saved views:	Сохранённые виды:
+	Saved configurations:	Сохранённые конфигурации:
+log	Command: {name}	Команда: {name}
+log	Distance = {d}	Расстояние = {d}
+log	{n} found	Найдено: {n}
+log	{n} found, {m} total	Найдено: {n}, всего {m}
+log	Save As will suggest {format}	«Сохранить как» предложит {format}
+log	Plotted to {path}	Напечатано в {path}
+log	{n} dimension(s) changed.	Изменено размеров: {n}.
+log	Defined blocks: {list}	Определённые блоки: {list}
+log	Text styles: {list}	Текстовые стили: {list}
+log	{name} successfully loaded.	{name} загружен.
+log	{name} was not saved; it stays open.	{name} не сохранён и остаётся открытым.
+log	{name} was not saved ({error}); it stays open.	{name} не сохранён ({error}) и остаётся открытым.
+log	Change area {i} of {n}.	Область изменений {i} из {n}.
+log	{n} viewport(s) selected.	Выбрано видовых экранов: {n}.
+log	Group {n} ungrouped.	Группа {n} расформирована.
+	<Dynamic Input on>	<Динамический ввод вкл>
+	<Dynamic Input off>	<Динамический ввод откл>
+	<Grid on>	<Сетка вкл>
+	<Grid off>	<Сетка откл>
+	<Lineweight on>	<Вес линий вкл>
+	<Lineweight off>	<Вес линий откл>
+	<Object Snap Tracking on>	<Объектное отслеживание вкл>
+	<Object Snap Tracking off>	<Объектное отслеживание откл>
+	<Ortho on>	<Орто вкл>
+	<Ortho off>	<Орто откл>
+	<Polar on>	<Полярное вкл>
+	<Polar off>	<Полярное откл>
+	<Quick Properties on>	<Быстрые свойства вкл>
+	<Quick Properties off>	<Быстрые свойства откл>
+	<Selection Cycling on>	<Циклический выбор вкл>
+	<Selection Cycling off>	<Циклический выбор откл>
+	<Snap on>	<Шаг вкл>
+	<Snap off>	<Шаг откл>
+	<Transparency on>	<Прозрачность вкл>
+	<Transparency off>	<Прозрачность откл>

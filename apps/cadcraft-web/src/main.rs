@@ -9,7 +9,7 @@
 //! (`host.rs`); a page can also host CADCraft in its own document (no iframe) with
 //! `data-host="page"` on the canvas, talking over DOM `CustomEvent`s on it (`host.rs`).
 //!
-//! AI-AutoCAD: `window.aiautocad` (`bridge.rs`) lets the assistant panel next to the editor drive
+//! AI Чертежи: `window.aiautocad` (`bridge.rs`) lets the assistant panel next to the editor drive
 //! it; saved drawings go to the page («Мои чертежи» on the server); the first start is in Russian,
 //! with metric drawings, DWG saves and the Brand theme; the house goes back to the site.
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
@@ -52,7 +52,11 @@ mod web {
             self.0.system_animations = self.3.as_ref().map(|reduced| !reduced.matches());
             self.0.logic(ctx);
             let drawing = self.0.session.state().ok();
-            crate::push_title(&mut self.4, drawing.map(|d| d.title.as_str()), drawing.is_some_and(|d| d.is_dirty()), set_page_title);
+            // An untitled drawing is named in the interface language (Чертёж1).
+            let language = self.0.language();
+            let name =
+                drawing.map(|d| cadcraft_ui_egui::i18n::with_language(language, || cadcraft_ui_egui::i18n::drawing_title(&d.title).into_owned()));
+            crate::push_title(&mut self.4, name.as_deref(), drawing.is_some_and(|d| d.is_dirty()), set_page_title);
             // The crate suppresses duplicates, so reporting after every logic callback
             // (including a hidden tab's) is idempotent and keeps the parent's guard current.
             if let Some(bridge) = &self.2 {
@@ -117,7 +121,7 @@ mod web {
         Services {
             pick_save: Some(Box::new(|name: &str| Some(name.to_string()))),
             no_file_system: true,
-            // AI-AutoCAD: the house at the right of the tool bar goes back to the site; the AI
+            // AI Чертежи: the house at the right of the tool bar goes back to the site; the AI
             // button and the drawing area's «ИИ у выделения…» open the page's AI menu.
             go_home: Some(Box::new(crate::bridge::go_home)),
             ai_assist: Some(Box::new(crate::bridge::ai_menu)),
@@ -157,7 +161,7 @@ mod web {
                 bridge.install();
                 cadcraft_engine::cmd::file::set_deliver(crate::host::deliver);
             }
-            // AI-AutoCAD: saved drawings go to the page while it takes them; the rest downloads.
+            // AI Чертежи: saved drawings go to the page while it takes them; the rest downloads.
             None => cadcraft_engine::cmd::file::set_deliver(crate::bridge::deliver),
         }
         let app_bridge = bridge.clone();
@@ -175,7 +179,7 @@ mod web {
                     options,
                     Box::new(move |cc| {
                         // Embedded, the host sends the drawing: start on the Start tab, not Drawing1.
-                        // AI-AutoCAD: new drawings are metric (millimetres, ЕСКД sheets), and the
+                        // AI Чертежи: new drawings are metric (millimetres, ЕСКД sheets), and the
                         // first one is open at once.
                         let mut session = Session::empty();
                         session.settings.measureinit = true;
@@ -193,7 +197,7 @@ mod web {
                         }
                         match cc.storage.and_then(|s| s.get_string(cadcraft_ui_egui::PREFS_KEY)) {
                             Some(prefs) => app.load_prefs(&prefs),
-                            // AI-AutoCAD's first start: Russian interface, the Brand theme (the
+                            // AI Чертежи's first start: Russian interface, the Brand theme (the
                             // other themes stay in View › Interface Theme and the panel's theme
                             // menu) and DWG saves (this build has the DWG bridge).
                             None => {
@@ -242,7 +246,7 @@ mod web {
                     Ok(()) => el.remove(),
                     Err(e) => {
                         el.set_inner_html(&format!(
-                            "<p>AI-AutoCAD не запустился: {e:?}</p><p>Нужен браузер с WebGPU или WebGL2: свежий Chrome, Edge, Firefox или Safari. Обновите страницу.</p>"
+                            "<p>AI Чертежи не запустился: {e:?}</p><p>Нужен браузер с WebGPU или WebGL2: свежий Chrome, Edge, Firefox или Safari. Обновите страницу.</p>"
                         ))
                     }
                 }
@@ -263,8 +267,8 @@ fn wants_cpu(query: &str) -> bool {
 #[cfg(any(target_arch = "wasm32", test))]
 fn document_title(name: Option<&str>, dirty: bool) -> String {
     match name.filter(|n| !n.trim().is_empty()) {
-        Some(name) => format!("{name}{} — AI-AutoCAD", if dirty { " •" } else { "" }),
-        None => "AI-AutoCAD".to_string(),
+        Some(name) => format!("{name}{} — AI Чертежи", if dirty { " •" } else { "" }),
+        None => "AI Чертежи".to_string(),
     }
 }
 
@@ -297,6 +301,19 @@ fn push_title(sent: &mut Option<String>, name: Option<&str>, dirty: bool, write:
 
 #[cfg(target_arch = "wasm32")]
 mod upload;
+
+/// Read a drawing and throw the result away: what the DWG check runs in a separate copy of the
+/// app inside a Web Worker (studio/dwgcheck.js) before the app itself opens a DWG. A file the
+/// reader rejects with an error is fine here (the app reports it when it opens the file); what
+/// the check is for is a crash inside the third-party DWG reader, which in the browser can't be
+/// caught and would stop the whole editor, but stops only the worker. Always `true` when it
+/// returns.
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen::prelude::wasm_bindgen(js_name = checkDrawing)]
+pub fn check_drawing(name: &str, bytes: &[u8]) -> bool {
+    let _ = cadcraft_io::read(bytes, name);
+    true
+}
 
 /// A file name the page passed: trimmed, at most 255 characters, without folders, `fallback` when
 /// empty.
@@ -382,12 +399,12 @@ mod tests {
     /// bullet; a blank or missing name leaves the app name alone and never shows a bullet.
     #[test]
     fn viewport_title_names_the_document_and_marks_unsaved_changes() {
-        assert_eq!(document_title(Some("drawing.dwg"), false), "drawing.dwg — AI-AutoCAD");
-        assert_eq!(document_title(Some("drawing.dwg"), true), "drawing.dwg • — AI-AutoCAD");
-        assert_eq!(document_title(Some("Drawing1"), false), "Drawing1 — AI-AutoCAD");
-        assert_eq!(document_title(None, false), "AI-AutoCAD");
-        assert_eq!(document_title(None, true), "AI-AutoCAD");
-        assert_eq!(document_title(Some("   "), true), "AI-AutoCAD");
+        assert_eq!(document_title(Some("drawing.dwg"), false), "drawing.dwg — AI Чертежи");
+        assert_eq!(document_title(Some("drawing.dwg"), true), "drawing.dwg • — AI Чертежи");
+        assert_eq!(document_title(Some("Drawing1"), false), "Drawing1 — AI Чертежи");
+        assert_eq!(document_title(None, false), "AI Чертежи");
+        assert_eq!(document_title(None, true), "AI Чертежи");
+        assert_eq!(document_title(Some("   "), true), "AI Чертежи");
     }
 
     /// Guards the change signal: a title is sent on open, rename, dirty change and close, but
@@ -395,17 +412,17 @@ mod tests {
     #[test]
     fn viewport_title_follows_open_rename_and_dirty_changes_only() {
         let mut sent = None;
-        assert_eq!(title_to_send(&mut sent, Some("drawing.dwg"), false).as_deref(), Some("drawing.dwg — AI-AutoCAD"));
+        assert_eq!(title_to_send(&mut sent, Some("drawing.dwg"), false).as_deref(), Some("drawing.dwg — AI Чертежи"));
         // The page already has it: send nothing.
         assert_eq!(title_to_send(&mut sent, Some("drawing.dwg"), false), None);
         // Unsaved changes add the bullet.
-        assert_eq!(title_to_send(&mut sent, Some("drawing.dwg"), true).as_deref(), Some("drawing.dwg • — AI-AutoCAD"));
+        assert_eq!(title_to_send(&mut sent, Some("drawing.dwg"), true).as_deref(), Some("drawing.dwg • — AI Чертежи"));
         // A rename shows the new name.
-        assert_eq!(title_to_send(&mut sent, Some("plan.dwg"), true).as_deref(), Some("plan.dwg • — AI-AutoCAD"));
+        assert_eq!(title_to_send(&mut sent, Some("plan.dwg"), true).as_deref(), Some("plan.dwg • — AI Чертежи"));
         // Saving clears it again.
-        assert_eq!(title_to_send(&mut sent, Some("plan.dwg"), false).as_deref(), Some("plan.dwg — AI-AutoCAD"));
+        assert_eq!(title_to_send(&mut sent, Some("plan.dwg"), false).as_deref(), Some("plan.dwg — AI Чертежи"));
         // Closing the last drawing leaves the app name only.
-        assert_eq!(title_to_send(&mut sent, None, false).as_deref(), Some("AI-AutoCAD"));
+        assert_eq!(title_to_send(&mut sent, None, false).as_deref(), Some("AI Чертежи"));
         assert_eq!(title_to_send(&mut sent, None, false), None);
     }
 
@@ -423,6 +440,6 @@ mod tests {
         assert!(push_title(&mut sent, Some("drawing.dwg"), true, |title| written.push(title.to_owned())));
         // Closing the drawing writes the app name.
         assert!(push_title(&mut sent, None, false, |title| written.push(title.to_owned())));
-        assert_eq!(written, ["drawing.dwg — AI-AutoCAD", "drawing.dwg • — AI-AutoCAD", "AI-AutoCAD"]);
+        assert_eq!(written, ["drawing.dwg — AI Чертежи", "drawing.dwg • — AI Чертежи", "AI Чертежи"]);
     }
 }

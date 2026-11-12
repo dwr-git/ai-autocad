@@ -469,7 +469,13 @@ pub fn show(app: &mut CadApp, ui: &mut egui::Ui, canvas: Rect) {
         let hr = Rect::from_min_size(pos2(bar.left(), bar.top() - lh * lines.len() as f32 - 4.0), vec2(w, lh * lines.len() as f32 + 2.0));
         p.rect_filled(hr, 3.0, t.cmd_history);
         for (i, l) in lines.iter().enumerate() {
-            p.text(pos2(hr.left() + 8.0, hr.top() + 1.0 + lh * i as f32), egui::Align2::LEFT_TOP, l, crate::theme::small(), t.text_dim);
+            p.text(
+                pos2(hr.left() + 8.0, hr.top() + 1.0 + lh * i as f32),
+                egui::Align2::LEFT_TOP,
+                crate::i18n::log_line(l),
+                crate::theme::small(),
+                t.text_dim,
+            );
         }
     }
     p.rect_filled(bar, 3.0, t.cmd_bg);
@@ -713,7 +719,7 @@ fn history_window(app: &CadApp, ui: &mut egui::Ui, r: Rect) {
             for l in log.get(rows).into_iter().flatten() {
                 let (row, _) = ui.allocate_exact_size(vec2(ui.available_width(), LINE_H), Sense::hover());
                 let p = ui.painter().with_clip_rect(row.intersect(ui.clip_rect()));
-                p.text(pos2(row.left(), row.center().y), egui::Align2::LEFT_CENTER, l, crate::theme::small(), t.text_dim);
+                p.text(pos2(row.left(), row.center().y), egui::Align2::LEFT_CENTER, crate::i18n::log_line(l), crate::theme::small(), t.text_dim);
             }
         },
     );

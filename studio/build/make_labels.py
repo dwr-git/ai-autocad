@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Russian names for the assistant's command search.
 
-Reads the Russian interface catalog AI-AutoCAD is built with (crates/ui-egui/src/i18n/ru.tsv: rows
+Reads the Russian interface catalog AI Чертежи is built with (crates/ui-egui/src/i18n/ru.tsv: rows
 `context<TAB>English<TAB>Русский`, `#` comments) and writes studio/ru-labels.json:
 
     {"text": {"Line": "Отрезок", ...}}

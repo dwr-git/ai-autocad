@@ -1,7 +1,7 @@
 //! Design tokens. Colours were measured from the reference look (dark slate chrome, near-black
 //! navy model space) and are CADCraft's own values; every widget reads them from here.
 //!
-//! AI-AutoCAD: three palettes, [`Tokens::BRAND`] (the default), [`Tokens::DARK`] (our NeuDark) and
+//! AI Чертежи: three palettes, [`Tokens::BRAND`] (the default), [`Tokens::DARK`] (our NeuDark) and
 //! [`Tokens::LIGHT`] (our NeuLight). The interface theme
 //! changes the chrome (title and tool bar, menus, palettes, tabs, command line, status bar,
 //! dialogs); the drawing area keeps its model-space colours in both, as drawing colours are not
@@ -20,10 +20,10 @@ pub enum ThemePref {
     /// Follow the operating system's light/dark appearance, live.
     System,
     Light,
-    /// CADCraft's original look (in AI-AutoCAD our NeuDark palette).
+    /// CADCraft's original look (in AI Чертежи our NeuDark palette).
     #[default]
     Dark,
-    /// AI-AutoCAD's Brand theme: navy chrome, the brand's blue-violet accent, solid black menus
+    /// AI Чертежи's Brand theme: navy chrome, the brand's blue-violet accent, solid black menus
     /// and windows with a strong shadow. Shown as a dark theme.
     Brand,
 }
@@ -148,7 +148,7 @@ pub struct Tokens {
 }
 
 impl Tokens {
-    /// AI-AutoCAD's Dark: our NeuDark palette (chrome #262D3A, cards #282F3D, canvas #1B202A, fields
+    /// AI Чертежи's Dark: our NeuDark palette (chrome #262D3A, cards #282F3D, canvas #1B202A, fields
     /// #202632, text #E4EBF6 / #C4CFE0 / #A0ADC2, accent #5CA8FF with dark text on it).
     pub const DARK: Tokens = Tokens {
         chrome: Color32::from_rgb(0x26, 0x2d, 0x3a),
@@ -197,7 +197,7 @@ impl Tokens {
         paper: Color32::WHITE,
     };
 
-    /// AI-AutoCAD's Light: our NeuLight palette (chrome #E4ECF6, cards #E6EEF8, fields #DCE6F3, text
+    /// AI Чертежи's Light: our NeuLight palette (chrome #E4ECF6, cards #E6EEF8, fields #DCE6F3, text
     /// #1E2C42 / #34445E / #4E5E78, accent #3480E2, accent text #1652A8). The drawing area keeps the
     /// dark model space, as drawing colours are not part of the interface theme.
     pub const LIGHT: Tokens = Tokens {
@@ -229,7 +229,7 @@ impl Tokens {
         ..Tokens::DARK
     };
 
-    /// AI-AutoCAD's Brand theme: the brand gradient's navy (#0a0a0f → #1a1a2e → #16213e) for the
+    /// AI Чертежи's Brand theme: the brand gradient's navy (#0a0a0f → #1a1a2e → #16213e) for the
     /// chrome, the brand's blue-violet (#667eea) for the accent, a deep navy model space.
     pub const BRAND: Tokens = Tokens {
         chrome: Color32::from_rgb(0x0c, 0x0d, 0x17),
@@ -304,12 +304,7 @@ pub fn paint_brand_backdrop(painter: &egui::Painter, rect: egui::Rect) {
     let vertex = |pos: egui::Pos2, color: Color32| Vertex { pos, uv: WHITE_UV, color };
     let (a, mid, b) = (Color32::from_rgb(0x0A, 0x0A, 0x0F), Color32::from_rgb(0x1A, 0x1A, 0x2E), Color32::from_rgb(0x16, 0x21, 0x3E));
     let mut m = Mesh::default();
-    m.vertices.extend([
-        vertex(rect.left_top(), a),
-        vertex(rect.right_top(), mid),
-        vertex(rect.right_bottom(), b),
-        vertex(rect.left_bottom(), mid),
-    ]);
+    m.vertices.extend([vertex(rect.left_top(), a), vertex(rect.right_top(), mid), vertex(rect.right_bottom(), b), vertex(rect.left_bottom(), mid)]);
     m.indices.extend([0, 1, 2, 0, 2, 3]);
     painter.add(egui::Shape::mesh(m));
     for (fx, fy, rgb, alpha) in [(0.2_f32, 0.8_f32, (120, 119, 198), 0.30_f32), (0.8, 0.2, (255, 119, 198), 0.30), (0.4, 0.4, (120, 219, 255), 0.20)]
@@ -894,7 +889,7 @@ fn visuals(theme: Theme) -> Visuals {
     v.window_corner_radius = egui::CornerRadius::same(6);
     v.menu_corner_radius = egui::CornerRadius::same(5);
     if !brand() {
-        // AI-AutoCAD's Light and Dark: neumorphic rounded windows and menus, soft shadows tinted
+        // AI Чертежи's Light and Dark: neumorphic rounded windows and menus, soft shadows tinted
         // with the palette's blue, dark text on the Dark theme's light-blue accent.
         let shade = if theme == Theme::Dark { Color32::from_black_alpha(150) } else { Color32::from_rgba_unmultiplied(0x46, 0x5a, 0x82, 70) };
         v.window_corner_radius = egui::CornerRadius::same(10);

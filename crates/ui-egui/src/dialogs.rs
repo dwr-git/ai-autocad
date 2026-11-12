@@ -344,13 +344,20 @@ fn about(ctx: &egui::Context, open: &mut bool) {
                 1 => crate::credits::contributors_ui(ui),
                 2 => crate::credits::models_ui(ui),
                 _ => {
-                    ui.heading("AI-AutoCAD");
+                    ui.heading("AI Чертежи");
                     ui.label(crate::tf!("Version {version}", version = env!("CARGO_PKG_VERSION")));
                     ui.label("Двухмерное черчение и проектирование в браузере: чертежи DWG и DXF, слои, размеры, штриховки, блоки, помощник с ИИ.");
                     ui.add_space(6.0);
                     ui.label(RichText::new("Основан на CADCraft от команды ArtCraft (github.com/storytold/cadcraft).").color(t.text_dim));
                     ui.add_space(6.0);
-                    ui.label(RichText::new("MIT OR Apache-2.0. Не связан с Autodesk, Inc.; AutoCAD — товарный знак Autodesk, Inc.").small().color(t.text_faint));
+                    ui.label(
+                        RichText::new(
+                            "AutoCAD — товарный знак компании Autodesk. AI Чертежи не связан с Autodesk и работает с файлами в её форматах.",
+                        )
+                        .small()
+                        .color(t.text_dim),
+                    );
+                    ui.label(RichText::new("MIT OR Apache-2.0").small().color(t.text_faint));
                 }
             }
         });

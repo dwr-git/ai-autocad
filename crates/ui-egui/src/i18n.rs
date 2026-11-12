@@ -349,6 +349,123 @@ pub fn menu(source: &str) -> &str {
     CURRENT.with(|l| tr_menu(l.get(), source))
 }
 
+/// A line the engine wrote to the command line, in the interface language. The whole line when
+/// the catalog has it ("Regenerating all viewports."), else the best `log` row whose literal text
+/// matches around its placeholders (`log\tCommand: {name}\tКоманда: {name}`), with the matched
+/// values put back unchanged. Lines nothing matches stay as the engine wrote them; the engine,
+/// scripts and the control channel keep the English text.
+pub fn log_line(line: &str) -> std::borrow::Cow<'_, str> {
+    CURRENT.with(|l| log_line_in(l.get(), line))
+}
+
+/// [`log_line`] in `language`.
+pub fn log_line_in<'a>(language: &str, line: &'a str) -> std::borrow::Cow<'a, str> {
+    use std::borrow::Cow;
+    let Some(catalog) = catalog(language) else { return Cow::Borrowed(line) };
+    if let Some(text) = catalog.get(&("", line)) {
+        return Cow::Owned((*text).to_string());
+    }
+    // The template with the most literal text wins ("{n} found, {m} total" over "{n} found").
+    let mut best: Option<(usize, &str, Vec<(&str, &str)>)> = None;
+    for ((context, key), value) in catalog.iter() {
+        if *context != "log" {
+            continue;
+        }
+        if let Some(values) = match_template(key, line) {
+            let literal = key.len().saturating_sub(values.iter().map(|(name, _)| name.len() + 2).sum::<usize>());
+            if best.as_ref().is_none_or(|(l, _, _)| literal > *l) {
+                best = Some((literal, *value, values));
+            }
+        }
+    }
+    let Some((_, text, values)) = best else { return Cow::Borrowed(line) };
+    let mut out = String::with_capacity(text.len() + line.len());
+    let mut rest = text;
+    while let Some((before, tail)) = rest.split_once('{') {
+        out.push_str(before);
+        match tail.split_once('}') {
+            Some((name, after)) => {
+                match values.iter().find(|(n, _)| *n == name) {
+                    Some((_, v)) => out.push_str(v),
+                    None => {
+                        out.push('{');
+                        out.push_str(name);
+                        out.push('}');
+                    }
+                }
+                rest = after;
+            }
+            None => {
+                out.push('{');
+                rest = tail;
+                break;
+            }
+        }
+    }
+    out.push_str(rest);
+    Cow::Owned(out)
+}
+
+/// The values of `{name}` placeholders when `line` is `template` with values in their places, or
+/// `None`. A placeholder takes the shortest text up to the next literal (the last one, the rest of
+/// the line before the template's ending); two placeholders side by side never match.
+fn match_template<'t, 'l>(template: &'t str, line: &'l str) -> Option<Vec<(&'t str, &'l str)>> {
+    let mut parts: Vec<(bool, &str)> = Vec::new();
+    let mut rest = template;
+    while let Some((before, tail)) = rest.split_once('{') {
+        let (name, after) = tail.split_once('}')?;
+        if !before.is_empty() {
+            parts.push((false, before));
+        }
+        if parts.last().is_some_and(|(var, _)| *var) || name.is_empty() {
+            return None;
+        }
+        parts.push((true, name));
+        rest = after;
+    }
+    if !rest.is_empty() {
+        parts.push((false, rest));
+    }
+    if !parts.iter().any(|(var, _)| *var) {
+        return None;
+    }
+    let mut values = Vec::new();
+    let mut pending: Option<&str> = None;
+    let mut left = line;
+    let count = parts.len();
+    for (i, (var, text)) in parts.into_iter().enumerate() {
+        if var {
+            pending = Some(text);
+            continue;
+        }
+        match pending.take() {
+            None => left = left.strip_prefix(text)?,
+            Some(name) => {
+                let at = if i + 1 == count { left.len().checked_sub(text.len()).filter(|&a| left.get(a..) == Some(text))? } else { left.find(text)? };
+                values.push((name, left.get(..at)?));
+                left = left.get(at + text.len()..)?;
+            }
+        }
+    }
+    if let Some(name) = pending {
+        values.push((name, left));
+        left = "";
+    }
+    left.is_empty().then_some(values)
+}
+
+/// The name of an untitled drawing ("Drawing1") in the interface language ("Чертёж1"); any other
+/// title (a file name) is shown as it is. Only what the user sees changes: the engine's title and
+/// what scripts and the control channel read stay "Drawing1".
+pub fn drawing_title(title: &str) -> std::borrow::Cow<'_, str> {
+    match title.strip_prefix("Drawing") {
+        Some(n) if !n.is_empty() && n.len() <= 9 && n.bytes().all(|b| b.is_ascii_digit()) => {
+            std::borrow::Cow::Owned(format("Drawing{n}", &[("n", n.to_string())]))
+        }
+        _ => std::borrow::Cow::Borrowed(title),
+    }
+}
+
 /// Named placeholders allow translations to reorder values. Inserted values are never looked up
 /// or substituted again, so a user's name containing `{n}` is preserved verbatim.
 pub fn format(source: &str, values: &[(&str, String)]) -> String {

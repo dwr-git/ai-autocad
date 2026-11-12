@@ -406,8 +406,7 @@ fn table(ui: &mut egui::Ui, list: &[&Contributor], v: &mut View) {
             for (c, cells) in list.iter().zip(rows) {
                 body.row(h, |mut row| {
                     row.col(|ui| {
-                        aligned(ui, false, |ui| ui.label(c.name(v.names)))
-                            .on_hover_text(c.summary());
+                        aligned(ui, false, |ui| ui.label(c.name(v.names))).on_hover_text(c.summary());
                     });
                     for text in cells {
                         row.col(|ui| {

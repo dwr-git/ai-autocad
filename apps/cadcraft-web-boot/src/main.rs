@@ -1,4 +1,4 @@
-//! Starts AI-AutoCAD in the browser from compressed parts of its WebAssembly.
+//! Starts AI Чертежи in the browser from compressed parts of its WebAssembly.
 //!
 //! Static hosts cap the size of one file (Cloudflare Pages: 25 MiB), and the app's wasm is at
 //! that size. `packaging/web/package.sh` gzips it and cuts it into parts listed in
@@ -236,8 +236,16 @@ mod boot {
         let url = web_sys::Url::new_with_base(&format!("./app/{}", super::loader(&list)), &base)?.href();
         let app = import(&url).await?;
         let start: js_sys::Function = js_sys::Reflect::get(&app, &JsValue::from_str("default"))?.dyn_into()?;
+        // Compiled once: the app starts from the module, and the page keeps it with the loader's
+        // address (`window.__aiautocadApp`) for the worker that tries a DWG in a separate
+        // instance before the app opens it (studio/dwgcheck.js): a crash there stops only the worker.
+        let module = JsFuture::from(js_sys::WebAssembly::compile(&wasm)).await?;
+        let shared = js_sys::Object::new();
+        js_sys::Reflect::set(&shared, &JsValue::from_str("loader"), &JsValue::from_str(&url))?;
+        js_sys::Reflect::set(&shared, &JsValue::from_str("module"), &module)?;
+        let _ = js_sys::Reflect::set(&window()?, &JsValue::from_str("__aiautocadApp"), &shared);
         let arg = js_sys::Object::new();
-        js_sys::Reflect::set(&arg, &JsValue::from_str("module_or_path"), &wasm)?;
+        js_sys::Reflect::set(&arg, &JsValue::from_str("module_or_path"), &module)?;
         let started: js_sys::Promise = start.call1(&JsValue::NULL, &arg)?.dyn_into()?;
         JsFuture::from(started).await.map(|_| ())
     }
@@ -275,12 +283,12 @@ mod boot {
                     Ok(()) => return,
                     Err(e) => e,
                 };
-                web_sys::console::error_2(&JsValue::from_str("ai-autocad-boot: could not start AI-AutoCAD:"), &error);
+                web_sys::console::error_2(&JsValue::from_str("ai-autocad-boot: could not start AI Чертежи:"), &error);
                 let Some(&wait) = RETRY_AFTER.get(attempt) else {
-                    say("AI-AutoCAD не скачался с сервера. Проверьте, что папка скопирована целиком, и попробуйте ещё раз: ", true);
+                    say("AI Чертежи не скачался с сервера. Проверьте, что папка скопирована целиком, и попробуйте ещё раз: ", true);
                     return;
                 };
-                say("Загрузка AI-AutoCAD\u{2026} (скачать не вышло, пробую ещё раз)", false);
+                say("Загрузка AI Чертежи\u{2026} (скачать не вышло, пробую ещё раз)", false);
                 sleep(wait).await;
                 attempt += 1;
             }

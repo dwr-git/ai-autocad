@@ -20,7 +20,7 @@ fn catalog_is_valid_and_preserves_placeholders_and_ellipses() {
         let (catalog, errors) = parse(language.source);
         assert!(errors.is_empty(), "{}: {errors:?}", language.code);
         for ((context, key), value) in catalog {
-            assert!(["", "menu", "@plural"].contains(&context), "unknown context: {context}");
+            assert!(["", "menu", "@plural", "log"].contains(&context), "unknown context: {context}");
             let forms: Vec<_> = if context == "@plural" { value.split('|').collect() } else { vec![value] };
             if context == "@plural" {
                 assert_eq!(forms.len(), language.plural_forms, "{}: {key}", language.code);
@@ -667,4 +667,33 @@ fn vietnamese_takes_one_form_and_needs_a_font_with_its_letters() {
         assert!(app.status.as_ref().is_some_and(|(s, _)| s.contains("Vietnamese letters")));
         assert_eq!(Preference::Vietnamese.name(), "Vietnamese");
     }
+}
+
+/// AI Чертежи: engine messages on the command line are shown translated: whole lines, and lines
+/// with values through `log` templates, the values kept as they are; the untitled drawing's name
+/// follows the interface language; English and unknown lines are unchanged.
+#[test]
+fn command_line_messages_and_untitled_names_follow_the_interface_language() {
+    assert_eq!(log_line_in("ru", "Regenerating all viewports."), "Регенерация всех видовых экранов.");
+    assert_eq!(log_line_in("ru", "Group begun"), "Группа начата");
+    assert_eq!(log_line_in("ru", "Command: CIRCLE"), "Команда: CIRCLE");
+    assert_eq!(log_line_in("ru", "Distance = 12.5"), "Расстояние = 12.5");
+    assert_eq!(log_line_in("ru", "<Ortho on>"), "<Орто вкл>");
+    assert_eq!(log_line_in("ru", "Save As will suggest DWG"), "«Сохранить как» предложит DWG");
+    assert_eq!(log_line_in("ru", "Something the catalog lacks"), "Something the catalog lacks");
+    assert_eq!(log_line_in("en", "Group begun"), "Group begun");
+    // A value with braces or template text is put back verbatim.
+    assert_eq!(log_line_in("ru", "Command: {n}"), "Команда: {n}");
+    assert_eq!(match_template("{a}{b}", "xy"), None, "two placeholders side by side never match");
+    assert_eq!(match_template("A {n} B", "A 1 B"), Some(vec![("n", "1")]));
+    assert_eq!(match_template("A {n} B", "A 1 C"), None);
+    assert_eq!(match_template("no placeholders", "no placeholders"), None);
+    with_language("ru", || {
+        assert_eq!(drawing_title("Drawing1"), "Чертёж1");
+        assert_eq!(drawing_title("Drawing12"), "Чертёж12");
+        assert_eq!(drawing_title("Drawing"), "Drawing");
+        assert_eq!(drawing_title("Drawing1.dwg"), "Drawing1.dwg");
+        assert_eq!(drawing_title("План.dwg"), "План.dwg");
+    });
+    assert_eq!(drawing_title("Drawing1"), "Drawing1", "English keeps the engine's name");
 }

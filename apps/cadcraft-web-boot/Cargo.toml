@@ -1,6 +1,6 @@
 [package]
 name = "cadcraft-web-boot"
-description = "Starts AI-AutoCAD in the browser from compressed parts of its WebAssembly"
+description = "Starts AI Чертежи in the browser from compressed parts of its WebAssembly"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

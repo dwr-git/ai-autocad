@@ -11,7 +11,7 @@ rust-version = "1.95"
 repository = "https://github.com/storytold/cadcraft"
 
 [workspace.dependencies]
-# The browser boot module (apps/cadcraft-web-boot, AI-AutoCAD) inflates the app's parts where the browser can't.
+# The browser boot module (apps/cadcraft-web-boot, AI Чертежи) inflates the app's parts where the browser can't.
 flate2 = { version = "1.1", default-features = false, features = ["rust_backend"] }
 # internal
 cadcraft-geom = { path = "crates/geom" }
@@ -124,7 +124,7 @@ egui_kittest = { git = "https://github.com/storytold/egui.git", rev = "6d518fc79
 eframe = { git = "https://github.com/storytold/egui.git", rev = "6d518fc799681571963842f95b55a6b68431b15a" }
 winit = { git = "https://github.com/storytold/winit.git", rev = "a517b3846ee8457d84ee4975110bfda6797c44dc" }
 
-# The browser build (apps/cadcraft-web, AI-AutoCAD): small and fast to download.
+# The browser build (apps/cadcraft-web, AI Чертежи): small and fast to download.
 [profile.web-release]
 inherits = "release"
 opt-level = "s"

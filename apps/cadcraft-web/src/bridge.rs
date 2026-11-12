@@ -1,4 +1,4 @@
-//! `window.aiautocad`: AI-AutoCAD's page bridge.
+//! `window.aiautocad`: AI Чертежи's page bridge.
 //!
 //! The assistant panel next to the editor (`studio/`) drives the app with the same JSON methods as
 //! the desktop control channel (`docs/control-protocol.md`), so it uses the commands the CLI and the
@@ -17,7 +17,7 @@
 //! ```
 //!
 //! `request`, `execute`, `commands`, `docInspect`, `uiInspect` and `screenshot` come from the shared
-//! page API (`craft-web-api`); the rest is AI-AutoCAD's. Results resolve with the method's
+//! page API (`craft-web-api`); the rest is AI Чертежи's. Results resolve with the method's
 //! `result`; errors reject with an `Error`.
 //!
 //! Events on `window`: `aiautocad:save` (`detail: {name, path, saveAs, bytes}`) for a drawing saved
@@ -68,7 +68,7 @@ pub fn install(ctx: egui::Context, inbox: crate::upload::Inbox) -> Receiver<Cont
     let request: Request = Rc::new(move |method, params| {
         let (control, reply) = ControlRequest::new(method, params);
         if queue.send(control).is_err() {
-            return Box::pin(async { json!({"ok": false, "error": "AI-AutoCAD не запущен"}) });
+            return Box::pin(async { json!({"ok": false, "error": "AI Чертежи не запущен"}) });
         }
         wake.request_repaint();
         Box::pin(wait(reply))
@@ -122,7 +122,7 @@ fn set(obj: &js_sys::Object, name: &str, f: JsValue) -> Result<(), JsValue> {
     js_sys::Reflect::set(obj, &name.into(), &f).map(|_| ())
 }
 
-/// `window.aiautocad` with AI-AutoCAD's own functions; the shared page API adds the rest to it.
+/// `window.aiautocad` with AI Чертежи's own functions; the shared page API adds the rest to it.
 fn own_functions(request: Request) -> Result<(), JsValue> {
     let obj = js_sys::Object::new();
     let inspect = request.clone();
@@ -150,7 +150,7 @@ fn own_functions(request: Request) -> Result<(), JsValue> {
         Closure::<dyn Fn() -> bool>::new(|| LINK.with(|l| l.borrow().as_ref().is_some_and(|link| link.ctx.text_edit_focused()))).into_js_value(),
     )?;
     set(&obj, "takesSaves", JsValue::FALSE)?;
-    set(&obj, "product", JsValue::from_str("AI-AutoCAD"))?;
+    set(&obj, "product", JsValue::from_str("AI Чертежи"))?;
     let w = web_sys::window().ok_or("no window")?;
     js_sys::Reflect::set(&w, &APP.into(), &obj)?;
     Ok(())
@@ -178,7 +178,7 @@ fn open(name: String, bytes: JsValue) -> Result<(), JsValue> {
     let name = crate::clean_name(&name, "Чертеж.dwg");
     LINK.with(|l| {
         let link = l.borrow();
-        let link = link.as_ref().ok_or_else(|| error("AI-AutoCAD ещё не запустился"))?;
+        let link = link.as_ref().ok_or_else(|| error("AI Чертежи ещё не запустился"))?;
         link.inbox.receive(name, bytes);
         link.ctx.request_repaint();
         Ok(())

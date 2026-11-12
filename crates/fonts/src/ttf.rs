@@ -1133,11 +1133,24 @@ pub(crate) fn fallback_glyph(c: char) -> Option<Arc<GlyphOutline>> {
     Some(glyph(&f, c)).filter(|g| g.mapped)
 }
 
-/// The glyph of `c` in `face`, or from a fallback font when `face` lacks it.
+/// A character of the same font that draws `c` when the font has no glyph for it: the diameter
+/// sign ⌀ (U+2300, what `%%c` and every diameter dimension decode to) and the empty set ∅ are
+/// drawn as Ø, which text fonts have and few of them pair with ⌀ (Arial and its metric twin
+/// Liberation Sans among them). Looking it up in the same face keeps the sign in the text's own
+/// style; without it a font with no ⌀ and no fallback font (the browser build) drew a box.
+fn same_font_stand_in(c: char) -> Option<char> {
+    matches!(c, '\u{2300}' | '\u{2205}').then_some('\u{d8}')
+}
+
+/// The glyph of `c` in `face`, or a stand-in from the same face ([`same_font_stand_in`]), or
+/// from a fallback font when `face` lacks it.
 fn glyph_or_fallback(face: &Face, c: char) -> Arc<GlyphOutline> {
     let g = glyph(face, c);
     if g.mapped || c.is_whitespace() {
         return g;
+    }
+    if let Some(alt) = same_font_stand_in(c).map(|s| glyph(face, s)).filter(|alt| alt.mapped) {
+        return alt;
     }
     fallback_glyph(c).unwrap_or(g)
 }
@@ -1376,6 +1389,23 @@ mod family_tests {
         // Angsana New and Browallia New under today's Windows file names and the older ones.
         let stems: Vec<String> = ["browa", "notosansthai-regular", "angsana", "browalia", "angsa", "arial"].map(String::from).to_vec();
         assert_eq!(script_candidates(&stems, THAI_FALLBACK), ["angsa", "angsana", "browa", "browalia", "notosansthai-regular"]);
+    }
+
+    /// The diameter sign of a dimension (`%%c` decodes to ⌀) is drawn with the text font's own Ø
+    /// when the font has no ⌀ (Carlito and Liberation Sans have none), not as a missing glyph.
+    /// Skips when the test font is not installed.
+    #[test]
+    fn diameter_sign_uses_the_fonts_own_o_slash_when_it_lacks_the_sign() {
+        let Ok(bytes) = std::fs::read("/usr/share/fonts/truetype/crosextra/Carlito-Regular.ttf") else { return };
+        let Some(face) = faces(&Arc::new(bytes)).into_iter().next() else { return };
+        assert!(!face.has_glyph('\u{2300}') && face.has_glyph('\u{d8}'), "the test font must lack ⌀ and have Ø");
+        let sign = glyph_or_fallback(&face, '\u{2300}');
+        let o_slash = glyph(&face, '\u{d8}');
+        assert!(sign.mapped, "⌀ must not be a missing glyph");
+        assert_eq!(sign.gid, o_slash.gid, "drawn with the same face's Ø");
+        assert_eq!(glyph_or_fallback(&face, '\u{2205}').gid, o_slash.gid);
+        // A character with no stand-in is unchanged.
+        assert_eq!(same_font_stand_in('A'), None);
     }
 
     #[test]

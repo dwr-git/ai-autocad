@@ -158,9 +158,9 @@ pub enum Icon {
     ZoomFit,
     TextStyle,
     DimStyle,
-    /// AI-AutoCAD: back to the site the editor lives on (a house).
+    /// AI Чертежи: back to the site the editor lives on (a house).
     House,
-    /// AI-AutoCAD: the AI assistant at the selection (a four-point spark).
+    /// AI Чертежи: the AI assistant at the selection (a four-point spark).
     Spark,
 }
 

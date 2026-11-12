@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds AI-AutoCAD: the browser app plus the assistant panel and its PHP, as one folder ready for
+# Builds AI Чертежи: the browser app plus the assistant panel and its PHP, as one folder ready for
 # the server, zipped:  $DIST/ai-autocad-build-<N>-<date>.zip  →  ai-autocad/
 # The folder works under any name: every path in it is relative.
 #
@@ -36,7 +36,9 @@ cp "$ROOT/studio/web/studio.js" "$ROOT/studio/web/studio.css" "$ROOT/studio/web/
 cp "$ROOT/studio/web/.htaccess" "$APP/studio/"
 # ЕСКД: рамки, основная надпись, слои и типы линий по ГОСТ, размеры, проверка чертежа.
 if [ -f "$ROOT/studio/web/eskd.js" ]; then cp "$ROOT/studio/web/eskd.js" "$APP/studio/"; fi
-# AI-AutoCAD's own icon: a drawing sheet with a title block and a dimensioned part, in the frame the other AI- apps share.
+# Проверка DWG в отдельном потоке перед открытием (Web Worker; studio.js загружает его сам).
+cp "$ROOT/studio/web/dwgcheck.js" "$APP/studio/"
+# Иконки: общий значок вкладки Dewiar (favicon.png) и иконка AI Чертежи для домашнего экрана (`drawings`), см. ATTRIBUTION.md.
 cp "$ROOT/studio/web/favicon.png" "$ROOT/studio/web/apple-touch-icon.png" "$APP/"
 python3 "$ROOT/studio/build/make_labels.py" "$APP/studio/ru-labels.json"
 
@@ -102,7 +104,7 @@ sed -i.bak "s#<html lang=\"ru\"#<html lang=\"ru\" data-build=\"$BUILD\"#" "$APP/
 grep -q "data-build=\"$BUILD\"" "$APP/index.html" || { echo "error: the page has no build number" >&2; exit 1; }
 # Каждая сборка — в своей папке b/<номер>/, index.php выбирает самую новую (studio/build/versioned.sh):
 # обновление любой программой заливки не может смешать файлы разных сборок.
-"$ROOT/studio/build/versioned.sh" "$APP" "$BUILD" "AI-AutoCAD"
+"$ROOT/studio/build/versioned.sh" "$APP" "$BUILD" "AI Чертежи"
 # Каждый текстовый файл с постоянным именем (страница, index.php, скрипты и стили панели, PHP
 # помощника, файл запуска с постоянным именем) получает в конце строку с номером сборки и набивкой
 # той же разной длины: иначе программа заливки, которая пропускает файлы того же размера, оставит

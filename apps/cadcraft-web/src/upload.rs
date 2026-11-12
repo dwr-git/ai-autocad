@@ -140,7 +140,39 @@ impl Inbox {
         self.push(Err(error));
     }
 
+    /// Take in a file for the next frame. A DWG is first read in a separate copy of the app in a
+    /// Web Worker when the page offers that (`window.aiautocadCheckDwg`, studio.js): the browser
+    /// can't catch a crash inside the third-party DWG reader, and there it stops only the worker.
+    /// A file the check stopped on is refused with a message; a check that can't run (no worker,
+    /// a development build) or takes too long lets the file open as before.
     fn push(&self, upload: Upload) {
+        match upload {
+            Ok((name, bytes)) if is_dwg(&name) => match dwg_checker() {
+                Some(check) => self.check_then_push(check, name, bytes),
+                None => self.store(Ok((name, bytes))),
+            },
+            other => self.store(other),
+        }
+    }
+
+    fn check_then_push(&self, check: js_sys::Function, name: String, bytes: Vec<u8>) {
+        let copy = js_sys::Uint8Array::from(bytes.as_slice());
+        let promise = match check.call2(&wasm_bindgen::JsValue::NULL, &wasm_bindgen::JsValue::from_str(&name), &copy) {
+            Ok(p) => p.dyn_into::<js_sys::Promise>().ok(),
+            Err(_) => None,
+        };
+        let Some(promise) = promise else { return self.store(Ok((name, bytes))) };
+        let inbox = self.clone();
+        wasm_bindgen_futures::spawn_local(async move {
+            let problem = wasm_bindgen_futures::JsFuture::from(promise).await.ok().and_then(|v| v.as_string()).filter(|m| !m.trim().is_empty());
+            match problem {
+                Some(why) => inbox.store(Err(format!("{name}: {why}"))),
+                None => inbox.store(Ok((name, bytes))),
+            }
+        });
+    }
+
+    fn store(&self, upload: Upload) {
         let mut files = self.files.take();
         files.push(upload);
         self.files.set(files);
@@ -168,6 +200,19 @@ impl Inbox {
             }
         }
     }
+}
+
+/// Whether `name` is a DWG drawing or template (read by the third-party DWG reader).
+fn is_dwg(name: &str) -> bool {
+    let n = name.to_ascii_lowercase();
+    n.ends_with(".dwg") || n.ends_with(".dwt")
+}
+
+/// The page's DWG check (`window.aiautocadCheckDwg(name, bytes)` → a promise of "" or why the
+/// file can't be opened), when it offers one.
+fn dwg_checker() -> Option<js_sys::Function> {
+    let window = web_sys::window()?;
+    js_sys::Reflect::get(&window, &wasm_bindgen::JsValue::from_str("aiautocadCheckDwg")).ok()?.dyn_into::<js_sys::Function>().ok()
 }
 
 /// Whether `name` is an SHX font or shape file.

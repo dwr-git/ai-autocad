@@ -448,7 +448,8 @@ fn run_ui_command_inner(app: &mut CadApp, id: &str, params: &Value) -> Option<Re
             })
             .unwrap_or(Ok(Value::Null)),
         "ui.saveas" | "saveas" if no_path => {
-            let title = app.session.state().map(|s| s.title.clone()).ok();
+            // An untitled drawing is suggested under its name in the interface language (Чертёж1).
+            let title = app.session.state().map(|s| crate::i18n::drawing_title(&s.title).into_owned()).ok();
             let name = app.ui.save_format.suggested_name(title.as_deref());
             // Bound to this drawing: the answer saves it, not whichever drawing is active then.
             app.pick_then(Pick::Save(name), |app, p| {
