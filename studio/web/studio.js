@@ -215,8 +215,10 @@
         } catch { state.selected = sel.slice(0, 20); }
       }
       try {
-        const units = await PC.exec('units', {});
-        if (units && units.insunits != null) state.units = Number(units.insunits) === 4 ? 'мм' : `INSUNITS=${units.insunits}`;
+        // getvar ничего не меняет (UNITS без параметров записал бы шаг отмены).
+        const u = await PC.exec('getvar', { name: 'INSUNITS' });
+        const v = u && u.value;
+        if (v != null) state.units = Number(v) === 4 ? 'мм' : `INSUNITS=${v}`;
       } catch { /* не важно */ }
       try {
         const cl = await PC.call('cmdline.state');
@@ -1080,8 +1082,8 @@
     return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: d.getFullYear() === now.getFullYear() ? undefined : 'numeric' }) + ', ' + time;
   };
   const DOC_EXT = /\.(dwg|dxf|dwt)$/i;
-  // Формат по умолчанию: DXF (родной формат редактора); имя с .dwg/.dwt сохраняется как есть.
-  const DEFAULT_EXT = '.dxf';
+  // Формат по умолчанию: DWG (как у AutoCAD); имя с .dxf/.dwt сохраняется как есть.
+  const DEFAULT_EXT = '.dwg';
 
   // Окно с одним полем: имя файла.
   function askName(title, value, note) {

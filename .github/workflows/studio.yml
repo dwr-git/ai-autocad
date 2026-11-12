@@ -18,7 +18,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: studio-build
+  group: studio-build-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
