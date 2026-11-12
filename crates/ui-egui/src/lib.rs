@@ -242,6 +242,13 @@ pub struct Services {
     pub no_file_system: bool,
     /// Pick a `.pgp` alias file, starting in the folder given (the last import's).
     pub pick_pgp: Option<Box<dyn Fn(Option<&str>) -> Option<String>>>,
+    /// AI-AutoCAD in the browser: leave the editor for the site it lives on (the house at the
+    /// right of the tool bar). `None` hides the house.
+    pub go_home: Option<Box<dyn Fn()>>,
+    /// AI-AutoCAD in the browser: open the page's AI menu at this point of the window (screen
+    /// points from its top left): the drawing area's context menu item «ИИ у выделения…».
+    /// `None` hides the item.
+    pub ai_assist: Option<Box<dyn Fn(f32, f32)>>,
 }
 
 /// The file dialog to show: Open, Save with the suggested file name, APPLOAD's `.lsp` picker or
@@ -1028,7 +1035,11 @@ impl CadApp {
         theme::set_active(shown);
         theme::set_canvas(self.options.canvas());
         let follows_system = self.ui.theme == theme::ThemePref::System;
-        if self.shown_theme != Some(shown) || self.shown_follows_system != follows_system {
+        // AI-AutoCAD: the Brand theme swaps the dark palette, so a change re-applies the styles.
+        let brand = self.ui.theme == theme::ThemePref::Brand;
+        let brand_changed = theme::brand() != brand;
+        theme::set_brand(brand);
+        if brand_changed || self.shown_theme != Some(shown) || self.shown_follows_system != follows_system {
             theme::apply(ctx, shown, follows_system);
             self.shown_theme = Some(shown);
             self.shown_follows_system = follows_system;

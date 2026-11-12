@@ -105,6 +105,7 @@ pub const UI_COMMANDS: &[(&str, &str, &[&str], Option<&str>)] = &[
     ("ui.theme.system", "Use System Setting", &["View", "Interface Theme", "Use System Setting"], None),
     ("ui.theme.light", "Light", &["View", "Interface Theme", "Light"], None),
     ("ui.theme.dark", "Dark", &["View", "Interface Theme", "Dark"], None),
+    ("ui.theme.brand", "Brand", &["View", "Interface Theme", "Brand"], None),
     ("ui.theme", "Interface Theme", &[], None),
     ("ui.saveformat.dxf", "DXF", &["File", "Default Save Format", "DXF"], None),
     ("ui.saveformat.dwg", "DWG", &["File", "Default Save Format", "DWG"], None),
@@ -203,7 +204,7 @@ fn run_recent_file_command(app: &mut CadApp, id: &str) -> Option<Result<Value, S
 
 fn run_preference_command(app: &mut CadApp, id: &str, params: &Value) -> Option<Result<Value, String>> {
     let r = match id {
-        "ui.theme.system" | "ui.theme.light" | "ui.theme.dark" => {
+        "ui.theme.system" | "ui.theme.light" | "ui.theme.dark" | "ui.theme.brand" => {
             let pref = crate::theme::ThemePref::parse(id.trim_start_matches("ui.theme.")).unwrap_or_default();
             set_theme(app, pref)
         }
@@ -211,7 +212,7 @@ fn run_preference_command(app: &mut CadApp, id: &str, params: &Value) -> Option<
         "ui.theme" => match params.get("theme").and_then(Value::as_str) {
             Some(name) => match crate::theme::ThemePref::parse(name) {
                 Some(pref) => set_theme(app, pref),
-                None => Err(format!("unknown theme \"{name}\" (system, light or dark)")),
+                None => Err(format!("unknown theme \"{name}\" (brand, system, light or dark)")),
             },
             None => Ok(theme_json(app)),
         },
@@ -626,7 +627,12 @@ fn theme_json(app: &CadApp) -> Value {
         crate::theme::ThemePref::System => app.shown_theme(),
         p => p.resolve(None),
     };
-    json!({ "theme": app.ui.theme.as_str(), "shown": if shown == egui::Theme::Light { "light" } else { "dark" } })
+    let shown = match (app.ui.theme, shown) {
+        (crate::theme::ThemePref::Brand, _) => "brand",
+        (_, egui::Theme::Light) => "light",
+        _ => "dark",
+    };
+    json!({ "theme": app.ui.theme.as_str(), "shown": shown })
 }
 
 fn set_animations(app: &mut CadApp, pref: crate::animation::AnimationPref) -> Value {

@@ -28,7 +28,7 @@
 	= Equals	= Равно
 	> Greater than	> Больше чем
 	About	О программе
-	About CADCraft	О CADCraft
+	About CADCraft	О AI-AutoCAD
 	Absolute	Абсолютные
 	Add Leader	Добавить выноску
 	Align	Выровнять
@@ -84,7 +84,7 @@
 	ByBlock	Поблоку
 	ByColor	ПоЦвету
 	ByLayer	Послою
-	CADCraft Help	Справка CADCraft
+	CADCraft Help	Справка AI-AutoCAD
 	Cancel	Отмена
 	Cartesian (x, y)	Декартовы (x, y)
 	Center	Центр
@@ -151,6 +151,7 @@
 	DWG	DWG
 	DXF	DXF
 	Dark	Темная
+	Brand	Фирменная
 	Default	По умолчанию
 	Default Save Format	Формат сохранения по умолчанию
 	Define Attributes	Определить атрибуты
@@ -590,7 +591,7 @@
 	Quick Select Properties	Свойства быстрого выбора
 	Quick Select...	Быстрый выбор...
 	QuickCalc	Быстрокалькулятор
-	Quit CADCraft	Выйти из CADCraft
+	Quit CADCraft	Выйти из AI-AutoCAD
 	Radius	Радиус
 	Raster Image	Растровое изображение
 	Ray	Луч
@@ -997,7 +998,7 @@
 @plural	{n} contributor	{n} участник|{n} участника|{n} участников
 	Drawing as bytes	Чертеж как байты
 	Services	Службы
-	Hide CADCraft	Скрыть CADCraft
+	Hide CADCraft	Скрыть AI-AutoCAD
 	Hide Others	Скрыть остальные
 	Accessibility	Специальные возможности
 	Show System Cursor	Показывать системный курсор
@@ -1013,7 +1014,7 @@
 	Query Texts	Запрос текстов
 	Analyze Shapes	Анализ фигур
 	Check for Updates…	Проверить обновления…
-	CADCraft is up to date.	У вас последняя версия CADCraft.
+	CADCraft is up to date.	У вас последняя версия AI-AutoCAD.
 	Could not check for updates.	Не удалось проверить обновления.
 	Find All	Find All
 	Find what:	Find what:

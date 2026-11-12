@@ -158,6 +158,10 @@ pub enum Icon {
     ZoomFit,
     TextStyle,
     DimStyle,
+    /// AI-AutoCAD: back to the site the editor lives on (a house).
+    House,
+    /// AI-AutoCAD: the AI assistant at the selection (a four-point spark).
+    Spark,
 }
 
 struct Pen<'a> {
@@ -941,6 +945,15 @@ fn paint_navigation_controls(pen: &Pen<'_>, icon: Icon, b: Color32, a: Color32, 
         ChevronUp => pen.poly(&[(6.0, 15.0), (12.0, 9.0), (18.0, 15.0)], false, b),
         ChevronLeft => pen.poly(&[(15.0, 6.0), (9.0, 12.0), (15.0, 18.0)], false, b),
         ChevronRight => pen.poly(&[(9.0, 6.0), (15.0, 12.0), (9.0, 18.0)], false, b),
+        House => {
+            pen.poly(&[(3.0, 12.0), (12.0, 4.0), (21.0, 12.0)], false, b);
+            pen.poly(&[(6.0, 10.0), (6.0, 20.0), (18.0, 20.0), (18.0, 10.0)], false, b);
+            pen.poly(&[(10.0, 20.0), (10.0, 14.0), (14.0, 14.0), (14.0, 20.0)], false, a);
+        }
+        Spark => {
+            pen.poly(&[(12.0, 3.0), (14.0, 10.0), (21.0, 12.0), (14.0, 14.0), (12.0, 21.0), (10.0, 14.0), (3.0, 12.0), (10.0, 10.0)], true, a);
+            pen.fill_c(19.0, 5.0, 1.5, b);
+        }
         Plus => {
             pen.l(12.0, 4.0, 12.0, 20.0);
             pen.l(4.0, 12.0, 20.0, 12.0);

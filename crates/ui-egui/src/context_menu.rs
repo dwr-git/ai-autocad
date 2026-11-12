@@ -58,6 +58,8 @@ pub const TYPE: &str = "type:";
 pub const KEYWORD: &str = "keyword:";
 /// An object snap menu item ([`choose_snap`]).
 pub const SNAP: &str = "snap:";
+/// AI-AutoCAD: the page's AI menu for the selection ([`crate::Services::ai_assist`]).
+pub const AI: &str = "ai:assist";
 
 fn item(app: &CadApp, id: &str, label: Option<&str>) -> Option<Entry> {
     let spec = find_command(id)?;
@@ -102,6 +104,10 @@ pub fn entries(app: &CadApp) -> Vec<Vec<Entry>> {
         .collect();
     first.extend(sub("Recent Commands", recent));
     push(&mut groups, first);
+    // AI-AutoCAD in the browser: the assistant for the selected text, notes and drawing.
+    if app.services.ai_assist.is_some() {
+        push(&mut groups, vec![Entry::Item { label: "ИИ у выделения…".into(), id: AI.into(), shortcut: None, enabled: true }]);
+    }
     // In the Block Editor: save the block or go back to the drawing.
     if app.session.state().is_ok_and(|st| st.block_edit.is_some()) {
         push(&mut groups, items(app, &["bsave", "bsaveas", "bclose"]));
@@ -339,6 +345,12 @@ pub fn show(app: &mut CadApp, resp: &egui::Response) {
     });
     match clicked {
         Some(id) if snap => choose_snap(app, &id),
+        Some(id) if id == AI => {
+            let at = resp.ctx.input(|i| i.pointer.latest_pos()).or(resp.interact_pointer_pos()).unwrap_or(resp.rect.center());
+            if let Some(ai) = &app.services.ai_assist {
+                ai(at.x, at.y);
+            }
+        }
         Some(id) => choose(app, &id),
         None => {}
     }

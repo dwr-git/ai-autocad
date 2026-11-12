@@ -72,8 +72,8 @@ pub fn title_and_toolbar(app: &mut CadApp, ui: &mut egui::Ui) {
             // The empty row moves the window; it goes first so later widgets take their own clicks.
             craft_window::title_bar::empty_area(ui, Rect::from_min_size(r.min, vec2(r.width(), title_h)));
             let title = match app.session.state() {
-                Ok(st) if !app.ui.start_tab => format!("CADCraft      {}{}", st.title, if st.title.contains('.') { "" } else { ".dwg" }),
-                _ => format!("CADCraft      {}", crate::tl!("Start")),
+                Ok(st) if !app.ui.start_tab => format!("AI-AutoCAD      {}{}", st.title, if st.title.contains('.') { "" } else { ".dwg" }),
+                _ => format!("AI-AutoCAD      {}", crate::tl!("Start")),
             };
             // Centred on the traffic lights' centre line (the row's middle): with the system font
             // the capitals' middle is the text box's middle, so no optical nudge.
@@ -88,7 +88,9 @@ pub fn title_and_toolbar(app: &mut CadApp, ui: &mut egui::Ui) {
             let mut clicked = None;
             let mac = ui.ctx().os().is_mac();
             let widths: Vec<_> = TOOLBAR.iter().map(|group| group.len() as f32 * (size + 6.0) - 6.0).collect();
-            let available = (row.right() - 12.0 - x).max(0.0);
+            // AI-AutoCAD: the AI button and the house take the right end of the row.
+            let site = site_buttons(app, ui, row, size);
+            let available = (row.right() - 12.0 - site - x).max(0.0);
             let Some(fit) = craft_ui::layout::fit_toolbar(&widths, available, 24.0, 30.0) else {
                 // Very small windows still expose the complete command row by scrolling.
                 ui.scope_builder(egui::UiBuilder::new().max_rect(row.shrink2(vec2(4.0, 0.0))), |ui| {
@@ -164,6 +166,48 @@ pub fn title_and_toolbar(app: &mut CadApp, ui: &mut egui::Ui) {
             }
         }
     });
+}
+
+/// AI-AutoCAD in the browser: at the right end of the tool bar, the AI button (the page's AI menu
+/// for the selection) and the house (back to the site), when the host provides them. Returns the
+/// width they take.
+fn site_buttons(app: &mut CadApp, ui: &mut egui::Ui, row: Rect, size: f32) -> f32 {
+    let t = Tokens::get();
+    let mut right = row.right() - 10.0;
+    let mut used = 0.0;
+    let buttons: [(Icon, &str, bool); 2] = [
+        (Icon::House, "На главную страницу сайта", app.services.go_home.is_some()),
+        (Icon::Spark, "ИИ у выделения: поправить надпись, перевести, оформить технические требования", app.services.ai_assist.is_some()),
+    ];
+    for (icon, tip, shown) in buttons {
+        if !shown {
+            continue;
+        }
+        let br = Rect::from_min_size(pos2(right - size, row.center().y - size / 2.0), vec2(size, size));
+        let resp = ui.interact(br, ui.scope_id().with(("site", tip)), Sense::click());
+        if resp.hovered() {
+            ui.painter().rect_filled(br, 3.0, t.control_hover.gamma_multiply(0.6));
+        }
+        icons::paint(ui.painter(), br.shrink(4.0), icon, false);
+        icons::describe_control(ui, &resp, tip, None, false);
+        if resp.on_hover_text(tip).clicked() {
+            match icon {
+                Icon::House => {
+                    if let Some(home) = &app.services.go_home {
+                        home();
+                    }
+                }
+                _ => {
+                    if let Some(ai) = &app.services.ai_assist {
+                        ai(br.left(), br.bottom() + 4.0);
+                    }
+                }
+            }
+        }
+        right -= size + 6.0;
+        used += size + 6.0;
+    }
+    used
 }
 
 /// File tabs: switcher, "+", Start, open drawings.
@@ -534,8 +578,13 @@ pub fn start_page(app: &mut CadApp, ui: &mut egui::Ui) {
     let p = ui.painter().clone();
     let left = Rect::from_min_size(r.min, vec2(300.0, r.height()));
     p.rect_filled(left, 0.0, t.chrome_dark);
-    p.rect_filled(Rect::from_min_max(pos2(left.right(), r.top()), r.max), 0.0, t.chrome);
-    p.text(pos2(left.left() + 34.0, left.top() + 70.0), egui::Align2::LEFT_CENTER, crate::tl!("CADCraft"), egui::FontId::proportional(28.0), t.text);
+    let right = Rect::from_min_max(pos2(left.right(), r.top()), r.max);
+    if crate::theme::brand() {
+        crate::theme::paint_brand_backdrop(&p, right);
+    } else {
+        p.rect_filled(right, 0.0, t.chrome);
+    }
+    p.text(pos2(left.left() + 34.0, left.top() + 70.0), egui::Align2::LEFT_CENTER, "AI-AutoCAD", egui::FontId::proportional(28.0), t.text);
     p.text(
         pos2(left.left() + 34.0, left.top() + 98.0),
         egui::Align2::LEFT_CENTER,

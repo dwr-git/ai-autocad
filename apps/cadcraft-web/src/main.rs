@@ -8,10 +8,14 @@
 //! same-origin parent page sends the drawing to open and stores what CADCraft saves instead
 //! (`host.rs`); a page can also host CADCraft in its own document (no iframe) with
 //! `data-host="page"` on the canvas, talking over DOM `CustomEvent`s on it (`host.rs`).
+//!
+//! AI-AutoCAD: `window.aiautocad` (`bridge.rs`) lets the assistant panel next to the editor drive
+//! it; saved drawings go to the page («Мои чертежи» on the server); the first start is in Russian,
+//! with metric drawings, DWG saves and the Brand theme; the house goes back to the site.
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 
 #[cfg(target_arch = "wasm32")]
-mod api;
+mod bridge;
 #[cfg(target_arch = "wasm32")]
 pub mod download;
 #[cfg(target_arch = "wasm32")]
@@ -54,6 +58,7 @@ mod web {
             if let Some(bridge) = &self.2 {
                 bridge.report_dirty(&self.0);
             }
+            crate::bridge::dirty(self.0.session.docs.iter().any(|d| d.is_dirty()));
         }
         /// Forward raw input to the web `CadApp` and capture Tab at the command line.
         fn raw_input_hook(&mut self, ctx: &egui::Context, raw: &mut egui::RawInput) {
@@ -109,7 +114,15 @@ mod web {
     /// no file system either, so a dropped file is opened from its contents and APPLOAD says to
     /// drop a `.lsp` file rather than asking for a name it cannot read.
     fn services() -> Services {
-        Services { pick_save: Some(Box::new(|name: &str| Some(name.to_string()))), no_file_system: true, ..Services::default() }
+        Services {
+            pick_save: Some(Box::new(|name: &str| Some(name.to_string()))),
+            no_file_system: true,
+            // AI-AutoCAD: the house at the right of the tool bar goes back to the site; the AI
+            // button and the drawing area's «ИИ у выделения…» open the page's AI menu.
+            go_home: Some(Box::new(crate::bridge::go_home)),
+            ai_assist: Some(Box::new(crate::bridge::ai_menu)),
+            ..Services::default()
+        }
     }
 
     pub fn start() {
@@ -144,7 +157,8 @@ mod web {
                 bridge.install();
                 cadcraft_engine::cmd::file::set_deliver(crate::host::deliver);
             }
-            None => cadcraft_engine::cmd::file::set_deliver(crate::download::download),
+            // AI-AutoCAD: saved drawings go to the page while it takes them; the rest downloads.
+            None => cadcraft_engine::cmd::file::set_deliver(crate::bridge::deliver),
         }
         let app_bridge = bridge.clone();
         wasm_bindgen_futures::spawn_local(async move {
@@ -161,16 +175,32 @@ mod web {
                     options,
                     Box::new(move |cc| {
                         // Embedded, the host sends the drawing: start on the Start tab, not Drawing1.
-                        let session = if app_bridge.is_some() { Session::empty() } else { Session::new() };
-                        let control = crate::api::install(cc.egui_ctx.clone());
+                        // AI-AutoCAD: new drawings are metric (millimetres, ЕСКД sheets), and the
+                        // first one is open at once.
+                        let mut session = Session::empty();
+                        session.settings.measureinit = true;
+                        if app_bridge.is_none() {
+                            session.new_drawing(true);
+                        }
+                        // Drawings the page opens and files picked or dropped arrive here.
+                        let inbox = crate::upload::Inbox::new(&cc.egui_ctx);
+                        let control = crate::bridge::install(cc.egui_ctx.clone(), inbox.clone());
                         let mut app = CadApp::new(session, services()).with_control(control);
                         app.system_languages =
                             web_sys::window().map(|w| w.navigator().languages().iter().filter_map(|v| v.as_string()).collect()).unwrap_or_default();
                         if let Some(profile) = cc.storage.and_then(|s| s.get_string(cadcraft_ui_egui::options::PROFILE_KEY)) {
                             app.load_profile(&profile);
                         }
-                        if let Some(prefs) = cc.storage.and_then(|s| s.get_string(cadcraft_ui_egui::PREFS_KEY)) {
-                            app.load_prefs(&prefs);
+                        match cc.storage.and_then(|s| s.get_string(cadcraft_ui_egui::PREFS_KEY)) {
+                            Some(prefs) => app.load_prefs(&prefs),
+                            // AI-AutoCAD's first start: Russian interface, the Brand theme, DWG
+                            // saves (the other themes stay in View › Interface Theme and the
+                            // panel's theme menu).
+                            None => {
+                                let _ = app.run("ui.language", serde_json::json!({"lang": "ru"}));
+                                app.ui.theme = cadcraft_ui_egui::theme::ThemePref::Brand;
+                                app.ui.save_format = cadcraft_ui_egui::SaveFormat::Dwg;
+                            }
                         }
                         if let Some(layout) = cc.storage.and_then(|s| s.get_string(crate::panel_layout::KEY))
                             && let Err(error) = crate::panel_layout::restore(&mut app.ui, &layout)
@@ -190,7 +220,6 @@ mod web {
                         }
                         // No paths on the web: OPEN asks the browser's file picker, which reads the
                         // chosen file in the background (`upload.rs`), so the picker returns none.
-                        let inbox = crate::upload::Inbox::new(&cc.egui_ctx);
                         let picker = inbox.clone();
                         app.services.pick_open = Some(Box::new(move || {
                             picker.pick();
@@ -212,7 +241,9 @@ mod web {
                 match result {
                     Ok(()) => el.remove(),
                     Err(e) => {
-                        el.set_inner_html(&format!("<p>CADCraft failed to start: {e:?}</p><p>A browser with WebGPU or WebGL2 is required.</p>"))
+                        el.set_inner_html(&format!(
+                            "<p>AI-AutoCAD не запустился: {e:?}</p><p>Нужен браузер с WebGPU или WebGL2: свежий Chrome, Edge, Firefox или Safari. Обновите страницу.</p>"
+                        ))
                     }
                 }
             }
@@ -232,8 +263,8 @@ fn wants_cpu(query: &str) -> bool {
 #[cfg(any(target_arch = "wasm32", test))]
 fn document_title(name: Option<&str>, dirty: bool) -> String {
     match name.filter(|n| !n.trim().is_empty()) {
-        Some(name) => format!("{name}{} — CADCraft", if dirty { " •" } else { "" }),
-        None => "CADCraft".to_string(),
+        Some(name) => format!("{name}{} — AI-AutoCAD", if dirty { " •" } else { "" }),
+        None => "AI-AutoCAD".to_string(),
     }
 }
 
@@ -267,6 +298,42 @@ fn push_title(sent: &mut Option<String>, name: Option<&str>, dirty: bool, write:
 #[cfg(target_arch = "wasm32")]
 mod upload;
 
+/// A file name the page passed: trimmed, at most 255 characters, without folders, `fallback` when
+/// empty.
+#[cfg(any(target_arch = "wasm32", test))]
+fn clean_name(name: &str, fallback: &str) -> String {
+    let base = name.rsplit(['/', '\\']).next().unwrap_or_default();
+    let name: String = base.trim().chars().filter(|c| !c.is_control()).take(255).collect();
+    if name.is_empty() || name == "." || name == ".." { fallback.to_string() } else { name }
+}
+
+/// Whether `name` ends in one of `exts` (lower case, without the dot).
+#[cfg(any(target_arch = "wasm32", test))]
+fn is_drawing_name(name: &str, exts: &[&str]) -> bool {
+    name.rsplit_once('.').is_some_and(|(_, ext)| exts.iter().any(|e| ext.eq_ignore_ascii_case(e)))
+}
+
+/// The other names a metric-compatible font answers for (a style naming `arial.ttf` draws with
+/// Liberation Sans): its file stem in lower case, without `.ttf`.
+#[cfg(any(target_arch = "wasm32", test))]
+fn font_aliases(stem: &str) -> &'static [&'static str] {
+    match stem {
+        "liberationsans-regular" => &["arial", "helvetica"],
+        "liberationsans-bold" => &["arialbd"],
+        "liberationsans-italic" => &["ariali"],
+        "liberationsans-bolditalic" => &["arialbi"],
+        "liberationserif-regular" => &["times", "timesnewroman"],
+        "liberationserif-bold" => &["timesbd"],
+        "liberationserif-italic" => &["timesi"],
+        "liberationserif-bolditalic" => &["timesbi"],
+        "liberationmono-regular" => &["cour", "couriernew"],
+        "liberationmono-bold" => &["courbd"],
+        "carlito-regular" => &["calibri"],
+        "caladea-regular" => &["cambria"],
+        _ => &[],
+    }
+}
+
 #[cfg(target_arch = "wasm32")]
 fn main() {
     web::start();
@@ -279,7 +346,24 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use super::{document_title, push_title, title_to_send, wants_cpu};
+    use super::{clean_name, document_title, font_aliases, is_drawing_name, push_title, title_to_send, wants_cpu};
+
+    /// Guards the page's file names: folders are dropped, blank names get the fallback, and only
+    /// drawings (not plots or exports) count as drawings.
+    #[test]
+    fn page_file_names_are_cleaned_and_drawings_told_apart() {
+        assert_eq!(clean_name("  План этажа.dwg ", "x.dwg"), "План этажа.dwg");
+        assert_eq!(clean_name("../../etc/passwd", "x.dwg"), "passwd");
+        assert_eq!(clean_name("a\\b\\c.dxf", "x.dwg"), "c.dxf");
+        assert_eq!(clean_name("   ", "x.dwg"), "x.dwg");
+        assert_eq!(clean_name("..", "x.dwg"), "x.dwg");
+        assert!(is_drawing_name("Деталь.DWG", &["dwg", "dxf"]));
+        assert!(is_drawing_name("a.dxf", &["dwg", "dxf"]));
+        assert!(!is_drawing_name("plot.pdf", &["dwg", "dxf"]));
+        assert!(!is_drawing_name("dwg", &["dwg", "dxf"]));
+        assert_eq!(font_aliases("liberationsans-regular"), ["arial", "helvetica"]);
+        assert!(font_aliases("unknown").is_empty());
+    }
 
     /// Guards the `?cpu` URL flag: only a whole `cpu` query parameter (bare or with a value)
     /// selects the CPU canvas, so `?sample` and `?gpucpu` stay on the GPU path.
@@ -298,12 +382,12 @@ mod tests {
     /// bullet; a blank or missing name leaves the app name alone and never shows a bullet.
     #[test]
     fn viewport_title_names_the_document_and_marks_unsaved_changes() {
-        assert_eq!(document_title(Some("drawing.dwg"), false), "drawing.dwg — CADCraft");
-        assert_eq!(document_title(Some("drawing.dwg"), true), "drawing.dwg • — CADCraft");
-        assert_eq!(document_title(Some("Drawing1"), false), "Drawing1 — CADCraft");
-        assert_eq!(document_title(None, false), "CADCraft");
-        assert_eq!(document_title(None, true), "CADCraft");
-        assert_eq!(document_title(Some("   "), true), "CADCraft");
+        assert_eq!(document_title(Some("drawing.dwg"), false), "drawing.dwg — AI-AutoCAD");
+        assert_eq!(document_title(Some("drawing.dwg"), true), "drawing.dwg • — AI-AutoCAD");
+        assert_eq!(document_title(Some("Drawing1"), false), "Drawing1 — AI-AutoCAD");
+        assert_eq!(document_title(None, false), "AI-AutoCAD");
+        assert_eq!(document_title(None, true), "AI-AutoCAD");
+        assert_eq!(document_title(Some("   "), true), "AI-AutoCAD");
     }
 
     /// Guards the change signal: a title is sent on open, rename, dirty change and close, but
@@ -311,17 +395,17 @@ mod tests {
     #[test]
     fn viewport_title_follows_open_rename_and_dirty_changes_only() {
         let mut sent = None;
-        assert_eq!(title_to_send(&mut sent, Some("drawing.dwg"), false).as_deref(), Some("drawing.dwg — CADCraft"));
+        assert_eq!(title_to_send(&mut sent, Some("drawing.dwg"), false).as_deref(), Some("drawing.dwg — AI-AutoCAD"));
         // The page already has it: send nothing.
         assert_eq!(title_to_send(&mut sent, Some("drawing.dwg"), false), None);
         // Unsaved changes add the bullet.
-        assert_eq!(title_to_send(&mut sent, Some("drawing.dwg"), true).as_deref(), Some("drawing.dwg • — CADCraft"));
+        assert_eq!(title_to_send(&mut sent, Some("drawing.dwg"), true).as_deref(), Some("drawing.dwg • — AI-AutoCAD"));
         // A rename shows the new name.
-        assert_eq!(title_to_send(&mut sent, Some("plan.dwg"), true).as_deref(), Some("plan.dwg • — CADCraft"));
+        assert_eq!(title_to_send(&mut sent, Some("plan.dwg"), true).as_deref(), Some("plan.dwg • — AI-AutoCAD"));
         // Saving clears it again.
-        assert_eq!(title_to_send(&mut sent, Some("plan.dwg"), false).as_deref(), Some("plan.dwg — CADCraft"));
+        assert_eq!(title_to_send(&mut sent, Some("plan.dwg"), false).as_deref(), Some("plan.dwg — AI-AutoCAD"));
         // Closing the last drawing leaves the app name only.
-        assert_eq!(title_to_send(&mut sent, None, false).as_deref(), Some("CADCraft"));
+        assert_eq!(title_to_send(&mut sent, None, false).as_deref(), Some("AI-AutoCAD"));
         assert_eq!(title_to_send(&mut sent, None, false), None);
     }
 
@@ -339,6 +423,6 @@ mod tests {
         assert!(push_title(&mut sent, Some("drawing.dwg"), true, |title| written.push(title.to_owned())));
         // Closing the drawing writes the app name.
         assert!(push_title(&mut sent, None, false, |title| written.push(title.to_owned())));
-        assert_eq!(written, ["drawing.dwg — CADCraft", "drawing.dwg • — CADCraft", "CADCraft"]);
+        assert_eq!(written, ["drawing.dwg — AI-AutoCAD", "drawing.dwg • — AI-AutoCAD", "AI-AutoCAD"]);
     }
 }

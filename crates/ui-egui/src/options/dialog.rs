@@ -98,6 +98,7 @@ fn theme_label(t: ThemePref) -> &'static str {
         ThemePref::System => crate::tl!("Use System Setting"),
         ThemePref::Light => crate::tl!("Light"),
         ThemePref::Dark => crate::tl!("Dark"),
+        ThemePref::Brand => crate::tl!("Brand"),
     }
 }
 

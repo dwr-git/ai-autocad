@@ -19,22 +19,26 @@ pub enum ThemePref {
     /// Follow the operating system's light/dark appearance, live.
     System,
     Light,
-    /// The default: CADCraft's original look.
+    /// CADCraft's original look (in AI-AutoCAD our NeuDark palette).
     #[default]
     Dark,
+    /// AI-AutoCAD's Brand theme: navy chrome, the brand's blue-violet accent, solid black menus
+    /// and windows with a strong shadow. Shown as a dark theme.
+    Brand,
 }
 
 /// The theme `System` uses when the OS (or browser) reports no appearance.
 pub const SYSTEM_FALLBACK: Theme = Theme::Dark;
 
 impl ThemePref {
-    pub const ALL: [ThemePref; 3] = [ThemePref::System, ThemePref::Light, ThemePref::Dark];
+    pub const ALL: [ThemePref; 4] = [ThemePref::Brand, ThemePref::System, ThemePref::Light, ThemePref::Dark];
 
     pub fn as_str(self) -> &'static str {
         match self {
             ThemePref::System => "system",
             ThemePref::Light => "light",
             ThemePref::Dark => "dark",
+            ThemePref::Brand => "brand",
         }
     }
 
@@ -47,7 +51,7 @@ impl ThemePref {
         match self {
             ThemePref::System => system.unwrap_or(SYSTEM_FALLBACK),
             ThemePref::Light => Theme::Light,
-            ThemePref::Dark => Theme::Dark,
+            ThemePref::Dark | ThemePref::Brand => Theme::Dark,
         }
     }
 }
@@ -64,6 +68,22 @@ pub fn active() -> Theme {
 
 pub fn set_active(theme: Theme) {
     ACTIVE.with(|a| a.set(theme));
+}
+
+thread_local! {
+    /// Whether the Brand theme is shown (set by [`set_brand`] each frame); its palette replaces
+    /// the dark one.
+    static BRAND: Cell<bool> = const { Cell::new(false) };
+}
+
+/// Whether the Brand theme is shown.
+pub fn brand() -> bool {
+    BRAND.with(Cell::get)
+}
+
+/// Show the Brand theme (`true`) or the plain dark and light ones.
+pub fn set_brand(on: bool) {
+    BRAND.with(|b| b.set(on));
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -205,9 +225,42 @@ impl Tokens {
         ..Tokens::DARK
     };
 
-    /// The palette of `theme`.
+    /// AI-AutoCAD's Brand theme: the brand gradient's navy (#0a0a0f → #1a1a2e → #16213e) for the
+    /// chrome, the brand's blue-violet (#667eea) for the accent, a deep navy model space.
+    pub const BRAND: Tokens = Tokens {
+        chrome: Color32::from_rgb(0x0c, 0x0d, 0x17),
+        chrome_dark: Color32::from_rgb(0x11, 0x12, 0x22),
+        panel: Color32::from_rgb(0x16, 0x18, 0x2a),
+        tab_active: Color32::from_rgb(0x2a, 0x30, 0x66),
+        control: Color32::from_rgb(0x1f, 0x22, 0x38),
+        control_hover: Color32::from_rgb(0x2d, 0x31, 0x52),
+        border: Color32::from_rgb(0x2a, 0x2d, 0x46),
+        canvas: BRAND_CANVAS,
+        grid_minor: Color32::from_rgb(0x1c, 0x1f, 0x36),
+        grid_major: Color32::from_rgb(0x25, 0x29, 0x45),
+        text: Color32::from_rgb(0xee, 0xf0, 0xff),
+        text_dim: Color32::from_rgb(0xb7, 0xbb, 0xd8),
+        text_faint: Color32::from_rgb(0x8a, 0x8f, 0xb0),
+        icon: Color32::from_rgb(0xf3, 0xf4, 0xff),
+        icon_accent: Color32::from_rgb(0x8a, 0x9b, 0xff),
+        accent: Color32::from_rgb(0x66, 0x7e, 0xea),
+        toggle_on: Color32::from_rgb(0x66, 0x7e, 0xea),
+        field: Color32::from_rgb(0x1f, 0x22, 0x38),
+        select_bg: Color32::from_rgb(0x4a, 0x5b, 0xc4),
+        cmd_bg: Color32::from_rgba_premultiplied(0x0e, 0x0f, 0x1c, 0xf0),
+        cmd_history: Color32::from_rgba_unmultiplied_const(0x10, 0x11, 0x20, 190),
+        cmd_border: Color32::from_rgb(0x4a, 0x4f, 0x75),
+        cmd_keyword: Color32::from_rgb(0xa9, 0xb4, 0xff),
+        cmd_keyword_hover: Color32::from_rgb(0x2a, 0x30, 0x66),
+        list_bg: Color32::from_rgb(0x11, 0x12, 0x22),
+        list_row: Color32::from_rgb(0x2a, 0x30, 0x66),
+        ..Tokens::DARK
+    };
+
+    /// The palette of `theme` (the Brand palette for the dark theme while [`brand`] is on).
     pub fn of(theme: Theme) -> Tokens {
         match theme {
+            Theme::Dark if brand() => Tokens::BRAND,
             Theme::Dark => Tokens::DARK,
             Theme::Light => Tokens::LIGHT,
         }
@@ -233,6 +286,56 @@ impl Tokens {
             crosshair: crosshair_color(bg),
             ..self
         }
+    }
+}
+
+/// The model space of the Brand theme: a deep navy, between the brand gradient's stops.
+pub const BRAND_CANVAS: Color32 = Color32::from_rgb(0x14, 0x16, 0x2a);
+
+/// The Brand theme's backdrop, as the owner's site draws it in CSS: the brand gradient
+/// (#0a0a0f → #1a1a2e → #16213e at 135°), three soft glows and a 30 px grid of 5% white lines.
+/// The Start page shows it.
+pub fn paint_brand_backdrop(painter: &egui::Painter, rect: egui::Rect) {
+    use egui::epaint::{Mesh, Vertex, WHITE_UV};
+    let vertex = |pos: egui::Pos2, color: Color32| Vertex { pos, uv: WHITE_UV, color };
+    let (a, mid, b) = (Color32::from_rgb(0x0A, 0x0A, 0x0F), Color32::from_rgb(0x1A, 0x1A, 0x2E), Color32::from_rgb(0x16, 0x21, 0x3E));
+    let mut m = Mesh::default();
+    m.vertices.extend([
+        vertex(rect.left_top(), a),
+        vertex(rect.right_top(), mid),
+        vertex(rect.right_bottom(), b),
+        vertex(rect.left_bottom(), mid),
+    ]);
+    m.indices.extend([0, 1, 2, 0, 2, 3]);
+    painter.add(egui::Shape::mesh(m));
+    for (fx, fy, rgb, alpha) in [(0.2_f32, 0.8_f32, (120, 119, 198), 0.30_f32), (0.8, 0.2, (255, 119, 198), 0.30), (0.4, 0.4, (120, 219, 255), 0.20)]
+    {
+        let c = rect.min + egui::vec2(rect.width() * fx, rect.height() * fy);
+        let far = egui::vec2(rect.width() * fx.max(1.0 - fx), rect.height() * fy.max(1.0 - fy)).length();
+        let reach = far * 0.5;
+        let inner = Color32::from_rgba_unmultiplied(rgb.0, rgb.1, rgb.2, (alpha * 255.0) as u8);
+        let mut g = Mesh::default();
+        g.vertices.push(vertex(c, inner));
+        const STEPS: u32 = 64;
+        for i in 0..=STEPS {
+            let angle = std::f32::consts::TAU * i as f32 / STEPS as f32;
+            g.vertices.push(vertex(c + egui::vec2(angle.cos(), angle.sin()) * reach, Color32::TRANSPARENT));
+        }
+        for i in 1..=STEPS {
+            g.indices.extend([0, i, i + 1]);
+        }
+        painter.add(egui::Shape::mesh(g));
+    }
+    let line = egui::Stroke::new(1.0, Color32::from_rgba_unmultiplied(255, 255, 255, 13));
+    let mut x = rect.left() + 0.5;
+    while x < rect.right() {
+        painter.vline(x, rect.y_range(), line);
+        x += 30.0;
+    }
+    let mut y = rect.top() + 0.5;
+    while y < rect.bottom() {
+        painter.hline(rect.x_range(), y, line);
+        y += 30.0;
     }
 }
 
@@ -786,6 +889,17 @@ fn visuals(theme: Theme) -> Visuals {
     v.popup_shadow = egui::epaint::Shadow { offset: [0, 4], blur: 12, spread: 0, color: shadow };
     v.window_corner_radius = egui::CornerRadius::same(6);
     v.menu_corner_radius = egui::CornerRadius::same(5);
+    if theme == Theme::Dark && brand() {
+        // Brand: menus, popups and windows are solid black blocks with a strong black shadow.
+        v.window_fill = Color32::BLACK;
+        v.window_stroke = egui::Stroke::new(1.0, Color32::from_rgb(0x26, 0x28, 0x3c));
+        v.window_corner_radius = egui::CornerRadius::same(8);
+        v.menu_corner_radius = egui::CornerRadius::same(6);
+        v.popup_shadow = egui::epaint::Shadow { offset: [0, 8], blur: 32, spread: 0, color: Color32::BLACK };
+        v.window_shadow = egui::epaint::Shadow { offset: [0, 10], blur: 36, spread: 2, color: Color32::BLACK };
+        v.selection.bg_fill = Color32::from_rgba_unmultiplied(0x66, 0x7e, 0xea, 0x88);
+        v.hyperlink_color = Color32::from_rgb(0xa9, 0xb4, 0xff);
+    }
     v
 }
 
