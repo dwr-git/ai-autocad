@@ -243,7 +243,8 @@ mod boot {
         let shared = js_sys::Object::new();
         js_sys::Reflect::set(&shared, &JsValue::from_str("loader"), &JsValue::from_str(&url))?;
         js_sys::Reflect::set(&shared, &JsValue::from_str("module"), &module)?;
-        let _ = js_sys::Reflect::set(&window()?, &JsValue::from_str("__aiautocadApp"), &shared);
+        // Without it only the DWG pre-check is skipped; the app itself still starts.
+        let _ = js_sys::Reflect::set(&JsValue::from(window()?), &JsValue::from_str("__aiautocadApp"), &shared);
         let arg = js_sys::Object::new();
         js_sys::Reflect::set(&arg, &JsValue::from_str("module_or_path"), &module)?;
         let started: js_sys::Promise = start.call1(&JsValue::NULL, &arg)?.dyn_into()?;
